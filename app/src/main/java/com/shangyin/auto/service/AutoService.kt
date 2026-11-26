@@ -19,6 +19,7 @@ import com.shangyin.auto.core.OcrEngine
 import com.shangyin.auto.core.RunnerState
 import com.shangyin.auto.core.ScreenCapture
 import com.shangyin.auto.overlay.FloatingPanel
+import com.shangyin.auto.util.IntegrityGuard
 import com.shangyin.auto.util.LogBus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -89,6 +90,14 @@ class AutoService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action
         if (action == null) return START_NOT_STICKY
+
+        // 防盗版：非官方安装包不允许拉起任何自动化能力
+        val verdict = IntegrityGuard.check(this)
+        if (!verdict.ok) {
+            LogBus.error("完整性校验失败，已拒绝启动：${verdict.reason}")
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
         if (action == ACTION_STOP) {
             stopAll()

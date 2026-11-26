@@ -90,6 +90,20 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
                 android:text="· 运行期间请勿在目标 App 内手动操作，手指点击会与自动点击冲突。\n· 点击发生在系统层，请确保自己有权操作的设备与账号。\n· 停止后屏幕录制会话立即释放，不会常驻录屏。" />
+
+            <TextView
+                style="@style/CardTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="五、正版来源与防盗版声明" />
+
+            <TextView
+                style="@style/BodyText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="· 上音是免费软件，官方唯一发布地址：github.com/niezhenhao/shangyin-auto。\n· 任何人不得在闲鱼、淘宝、拼多多等电商或二手平台以任何形式出售本软件或本安装包。\n· 如果你是花钱买到的：请立即申请退款，并向平台举报卖家，同时在 GitHub 仓库反馈。\n· 本软件内置签名校验：任何对安装包的修改、反编译重打包、换签名、改包名都会导致校验失败，程序启动即拦截，无法使用。\n· 请勿使用 Xposed、LSPatch、Frida 等框架注入本应用，检测到注入痕迹同样会拦截。" />
         </LinearLayout>
     </ScrollView>
 

@@ -18,4 +18,7 @@
     <string name="perm_battery">电池优化白名单</string>
 
     <string name="log_title">运行日志</string>
+    <string name="official_mark">官方免费版 · github.com/niezhenhao/shangyin-auto · 禁止任何平台售卖</string>
+    <string name="official_mark_short">上音 官方免费版 · 禁止售卖</string>
+    <string name="piracy_title">非官方版本，已停止运行</string>
 </resources>

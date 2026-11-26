@@ -6,18 +6,34 @@
 不需要电脑、不需要数据线，全部在手机上完成：截图 → 离线中文 OCR → 匹配目标词 → 点击。
 
 - 包名：`com.shangyin.auto`
-- 版本：**2.0.0**（release 正式签名）
+- 版本：**2.1.0**（release 正式签名，内置防盗版校验）
 - 最低系统：Android 8.0（API 26），推荐 Android 11+（无线调试启动 Shizuku 需要 11+）
+
+> 本软件**完全免费**，官方唯一发布地址是 GitHub 仓库 `niezhenhao/shangyin-auto`。
+> **任何人不得在闲鱼、淘宝、拼多多等电商或二手平台出售本软件或本安装包。**
+> 如果你是花钱买到的，请立即申请退款、向平台举报卖家，并在仓库提 issue 反馈。
 
 
 ## 下载安装
 
 | 方式 | 地址 |
 | --- | --- |
-| 直接下载 APK（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v2.0.0-release.apk |
-| 仓库 Releases | https://github.com/niezhenhao/shangyin-auto/releases/tag/v2.0.0 |
+| 直接下载 APK（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v2.1.0-release.apk |
+| 仓库 Releases | https://github.com/niezhenhao/shangyin-auto/releases/tag/v2.1.0 |
 
-安装前注意：若手机已装 1.0.0（debug 签名），请先卸载再装 2.0.0，否则会提示签名冲突。
+安装前注意：若手机已装 1.0.0（debug 签名），请先卸载再装；2.0.0 → 2.1.0 为同一 release 签名，可直接覆盖升级。
+
+## 2.1.0 更新（防盗版）
+
+| 项 | 2.1.0 的变化 |
+| --- | --- |
+| 签名校验 | 启动即校验安装包签名证书 SHA-256，只认官方 release / debug 证书；反编译改代码后必须重签名，一旦重签即被拦截 |
+| 包名校验 | 硬编码官方包名，改包名做「共存版」同样判定非官方 |
+| 注入检测 | 检测调试器附加、Frida / Xposed / LSPatch 落地文件与 `/proc/self/maps` 中的注入库，防止动态 Hook 绕过 |
+| 拦截行为 | 非官方版本启动时禁用全部功能入口，弹出不可取消的拦截框并引导跳转官方地址（可自行点「退出」） |
+| 服务侧校验 | `AutoService` 收到启动指令时二次校验，绕过界面也无法拉起自动化 |
+| 官方水印 | 主界面与悬浮条常驻「官方免费版 · 禁止售卖」标识，截图外流时一并带上 |
+| 使用说明 | 新增第五节「正版来源与防盗版声明」，明确免费、禁止售卖、买到盗版如何退款举报 |
 
 ## 2.0.0 更新
 
@@ -85,6 +101,7 @@ app/src/main/java/com/shangyin/auto/
 │   └── AutoRunner.kt      # 主循环：截图 → OCR → 匹配 → 点击
 ├── ui/GuideDialog.kt      # 2.0.0 使用说明弹窗
 ├── util/
+│   ├── IntegrityGuard.kt  # 2.1.0 防盗版：签名 / 包名 / 注入痕迹校验
 │   ├── LogBus.kt
 │   ├── ShizukuUtil.kt
 │   └── WirelessDebugScanner.kt
@@ -125,4 +142,5 @@ keyPassword=******
 - 从 1.0.0（debug 签名）升级到 2.0.0（release 签名）因签名不同，需先卸载旧版再安装；
 - Shizuku 无线调试启动依赖 Shizuku 应用本身，未安装时只能用无障碍通道；
 - APK 约 44MB，主要是 ML Kit 中文 OCR 离线模型。
+- **防盗版能力边界**：签名校验无法阻止别人把同一份官方 APK 挂在闲鱼上转卖（那也是官方包），只能保证——被改动/重打包/重签名的包一律不可用，官方包本身带免费声明与官方地址水印，买家拿到手一眼能看到「官方免费、禁止售卖」。若发现有人售卖，请向平台举报并附上本仓库地址。
 

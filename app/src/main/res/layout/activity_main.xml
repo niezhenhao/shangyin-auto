@@ -58,6 +58,16 @@
             android:textColor="@color/ink_secondary"
             android:textSize="13sp" />
 
+        <!-- 官方来源水印：任何人不得在电商/二手平台售卖 -->
+        <TextView
+            android:id="@+id/tvOfficial"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/official_mark"
+            android:textColor="@color/brand"
+            android:textSize="11sp" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

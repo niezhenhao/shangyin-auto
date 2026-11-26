@@ -20,6 +20,7 @@ import com.shangyin.auto.core.RunnerState
 import com.shangyin.auto.databinding.ActivityMainBinding
 import com.shangyin.auto.service.AutoService
 import com.shangyin.auto.ui.GuideDialog
+import com.shangyin.auto.util.IntegrityGuard
 import com.shangyin.auto.util.LogBus
 import com.shangyin.auto.util.ShizukuUtil
 import kotlinx.coroutines.launch
@@ -80,6 +81,15 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
+
+        // 防盗版：签名 / 包名 / 注入痕迹校验，非官方版本直接拦截
+        val verdict = IntegrityGuard.check(this)
+        if (!verdict.ok) {
+            blockNonOfficial(verdict.reason)
+            return
+        }
+
+        b.tvOfficial.setOnClickListener { openOfficialHome() }
 
         b.tvVersion.text = "v" + runCatching {
             packageManager.getPackageInfo(packageName, 0).versionName
@@ -367,5 +377,39 @@ class MainActivity : AppCompatActivity() {
             else -> openBatterySettings()
         }
         LogBus.warn("还需开启：${missing.joinToString("、")}")
+    }
+
+    /** 非官方版本：禁用全部入口并弹窗引导获取正版 */
+    private fun blockNonOfficial(reason: String) {
+        runCatching {
+            b.btnRun.isEnabled = false
+            b.btnSimulate.isEnabled = false
+            b.btnFloat.isEnabled = false
+            b.btnWireless.isEnabled = false
+        }
+        LogBus.error("完整性校验失败：$reason")
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.piracy_title)
+            .setMessage(
+                "$reason\n\n上音是作者免费发布的软件，官方唯一地址：\n${IntegrityGuard.OFFICIAL_HOME}\n\n" +
+                    "如果你是在闲鱼、淘宝等平台花钱买到的，请立即申请退款并向平台举报卖家。"
+            )
+            .setCancelable(false)
+            .setPositiveButton("获取官方版本") { _, _ ->
+                openOfficialHome()
+                finish()
+            }
+            .setNegativeButton("退出") { _, _ -> finish() }
+            .show()
+    }
+
+    /** 打开官方发布页 */
+    private fun openOfficialHome() {
+        runCatching {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(IntegrityGuard.OFFICIAL_HOME)))
+        }.onFailure {
+            Toast.makeText(this, IntegrityGuard.OFFICIAL_HOME, Toast.LENGTH_LONG).show()
+        }
     }
 }
