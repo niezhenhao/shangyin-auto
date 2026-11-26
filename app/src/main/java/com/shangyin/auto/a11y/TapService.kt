@@ -4,6 +4,9 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
 import android.view.accessibility.AccessibilityEvent
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * 无障碍点击执行器：Shizuku 不可用时的备用通道。
@@ -53,6 +56,33 @@ class TapService : AccessibilityService() {
             .addStroke(GestureDescription.StrokeDescription(path, 0, 60))
             .build()
         return dispatchGesture(gesture, null, null)
+    }
+
+    /**
+     * 同步点击（v3.8.0）：等手势真正执行完成再返回，避免「派发成功但事件被丢弃」
+     * 被误判成点击成功；超时或系统回调取消均视为失败，供上层重试。
+     */
+    fun tapSync(x: Int, y: Int, timeoutMs: Long = 800L): Boolean {
+        val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0, 60))
+            .build()
+        val latch = CountDownLatch(1)
+        val completed = AtomicBoolean(false)
+        val callback = object : GestureResultCallback() {
+            override fun onCompleted(gestureDescription: GestureDescription?) {
+                completed.set(true)
+                latch.countDown()
+            }
+
+            override fun onCancelled(gestureDescription: GestureDescription?) {
+                completed.set(false)
+                latch.countDown()
+            }
+        }
+        if (!dispatchGesture(gesture, callback, null)) return false
+        val finished = latch.await(timeoutMs, TimeUnit.MILLISECONDS)
+        return finished && completed.get()
     }
 
     fun back(): Boolean = performGlobalAction(GLOBAL_ACTION_BACK)

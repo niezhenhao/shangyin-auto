@@ -1,4 +1,15 @@
 ---
+AIGC:
+    Label: "1"
+    ContentProducer: 001191440300708461136T1XGW3
+    ProduceID: 86dc83f3a58f980d43f484e1b402936c_87c28859e98a11f1961f525400f8a581
+    ReservedCode1: ur2n9JrgJr842Ais72cI11+UdjKWlQarXtxhaqXgIcFWcsFI0t8lYfffC1Zh3tDpSAHInUJr/Iz8/mIOTU75xAf2W3eH6RtRo1+msKaOYWOzKqJIXcdPg2kNWTjCaHiGgVXQisYxQTxraXgR98QP/j8jQ+IlBEFOKN+cdLB6wQmC2fxRc1Ca43iUKZg=
+    ContentPropagator: 001191440300708461136T1XGW3
+    PropagateID: 86dc83f3a58f980d43f484e1b402936c_87c28859e98a11f1961f525400f8a581
+    ReservedCode2: ur2n9JrgJr842Ais72cI11+UdjKWlQarXtxhaqXgIcFWcsFI0t8lYfffC1Zh3tDpSAHInUJr/Iz8/mIOTU75xAf2W3eH6RtRo1+msKaOYWOzKqJIXcdPg2kNWTjCaHiGgVXQisYxQTxraXgR98QP/j8jQ+IlBEFOKN+cdLB6wQmC2fxRc1Ca43iUKZg=
+---
+
+---
 
 # 上音（ShangYin）
 
@@ -7,7 +18,7 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 不需要电脑、不需要数据线，全部在手机上完成：截图 → 离线中文 OCR → 匹配目标词 → 点击。
 
 - 包名：`com.shangyin.auto`
-- 版本：**3.7.0**（release 正式签名，内置防盗版校验）
+- 版本：**3.8.0**（release 正式签名，内置防盗版校验）
 - 最低系统：Android 8.0（API 26），推荐 Android 11+（无线调试启动 Shizuku 需要 11+）
 
 > 本软件**完全免费**，官方唯一发布地址是 GitHub 仓库 `niezhenhao/shangyin-auto`。
@@ -19,12 +30,24 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 
 | 方式 | 地址 |
 | --- | --- |
-| Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v3.7.0/ShangYin-v3.7.0-release.apk |
-| 仓库内直链（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v3.7.0-release.apk |
-| 仓库 Releases | https://github.com/niezhenhao/shangyin-auto/releases/tag/v3.7.0 |
+| Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v3.8.0/ShangYin-v3.8.0-release.apk |
+| 仓库内直链（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v3.8.0-release.apk |
+| 仓库 Releases | https://github.com/niezhenhao/shangyin-auto/releases/tag/v3.8.0 |
 
 安装前注意：若手机已装 1.0.0（debug 签名），请先卸载再装；2.0.0 及之后均为同一 release 签名，可直接覆盖升级。
 
+## 3.8.0 更新（无障碍通道 · 汽水收尾修复）
+
+| 项 | 3.8.0 的变化 |
+| --- | --- |
+| 汽水关闭 X 修复 | 广告页顶部「领取成功 ×」OCR 只给出整框中心，旧逻辑点在「领取」二字上导致 X 从未被点击；现按「文字右端（含 × 的宽框取框内右端）→ 图形 ×（像素级定位）→ 固定坐标（0.918, 0.058）」三级兜底点击，任一成功即停 |
+| 汽水奖励面板优先 | 广告结束先找「领取奖励 / 立即领取 / 点击领取 / 开心收下 / 继续观看」面板按钮，领到或面板消失后再决定是否点 X 关闭；不会为了关广告而错过奖励 |
+| 汽水播完判定 | 由「见到字样就点」改为「画面静止 + 领取成功角标 / 最短观看 15 秒」，广告还在播不会误关；超时上限 120 秒兜底，先试「跳过」再收尾 |
+| 汽水防空转 | 广告条消失后若既无面板也不再点 X（避免误关免费听歌页）；关闭失败先试返回键，仍不行则停止重试并提示手动点一次，不再反复空点 |
+| 无障碍通道 | 三平台点击统一改为「无障碍节点优先、坐标点击兜底」：按控件文案 + 落点容差（屏高 7%）精确命中节点本体再派发 ACTION_CLICK，失败或距离过远自动回退原坐标点击 |
+| 点击同步 | 无障碍手势点击改为回调同步等待（800ms），点击不再「发出去就返回」，冷却与后续校验更可靠；Shizuku 通道失联时自动退化 |
+| 互不影响 | QqRunner / KugouRunner / AutoRunner 各自独立改动，酷狗「点击浏览」、开关校验、右上角「更新」按钮与启动自动检测逻辑保持不变 |
+| 版本 | versionCode 38 / versionName 3.8.0，关于卡片版本兜底值同步为 3.8.0 |
 ## 3.7.0 更新（启动自动检测 · 手动兜底）
 
 | 项 | 3.7.0 的变化 |
@@ -216,3 +239,4 @@ keyPassword=******
 - APK 约 44MB，主要是 ML Kit 中文 OCR 离线模型。
 - **防盗版能力边界**：签名校验无法阻止别人把同一份官方 APK 挂在闲鱼上转卖（那也是官方包），只能保证——被改动/重打包/重签名的包一律不可用，官方包本身带免费声明与官方地址水印，买家拿到手一眼能看到「官方免费、禁止售卖」。若发现有人售卖，请向平台举报并附上本仓库地址。
 
+*（内容由AI生成，仅供参考）*

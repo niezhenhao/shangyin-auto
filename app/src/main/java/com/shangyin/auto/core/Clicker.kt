@@ -29,7 +29,11 @@ object Clicker {
             if (ShizukuUtil.exec("input tap $x $y", 2500)) return true
         }
         // Shizuku 失败或未授权时，自动退化到无障碍通道
-        return TapService.instance?.tap(x, y) ?: false
+        val svc = TapService.instance ?: return false
+        // v3.8.0：无障碍手势改为同步校验 + 一次重试，杜绝「派发成功但事件被丢弃」的静默失效
+        if (svc.tapSync(x, y)) return true
+        LogBus.warn("无障碍手势未执行完成，重试一次 ($x,$y)")
+        return svc.tapSync(x, y, 900L)
     }
 
     fun back(): Boolean {

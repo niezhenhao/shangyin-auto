@@ -3,12 +3,16 @@ package com.shangyin.auto.core
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import com.shangyin.auto.a11y.A11yNode
 import com.shangyin.auto.util.LogBus
 import com.shangyin.auto.util.ShizukuUtil
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.pow
+
+/** v3.8.0：无障碍节点点击的落点容差（占采集画面高度比例），超出即视为非同一控件 */
+private const val KUGOU_A11Y_TOLERANCE_RATIO = 0.07f
 
 /**
  * 酷狗音乐「看广告免费听歌」自动流程，移植自 kugou-auto/kugou_auto.py 的多阶段状态机：
@@ -867,6 +871,8 @@ class KugouRunner(
             delay(400)
             return true
         }
+        // v3.8.0：无障碍节点优先（命中控件本体），失败自动回退坐标点击
+        if (A11yNode.available() && tapAtNode(cx, cy, label)) return true
         val ok = Clicker.tap(x, y)
         if (!ok) {
             LogBus.error("点击未生效：${Clicker.lastError()}")
@@ -875,6 +881,38 @@ class KugouRunner(
         RunnerState.clicks++
         RunnerState.lastHit = label
         return true
+    }
+
+    /**
+     * v3.8.0 无障碍优先点击：节点命中的是控件本体，比坐标更稳（宽框、近邻文字不会误点）；
+     * 节点不可用 / 无对应文案 / 距离过远时自动回退原坐标点击，业务判定逻辑一行未改。
+     */
+    private suspend fun tapAtNode(cx: Float, cy: Float, label: String): Boolean {
+        val x = (cx * capture.scaleX).toInt()
+        val y = (cy * capture.scaleY).toInt()
+        val tolerance = capture.scaleY * KUGOU_A11Y_TOLERANCE_RATIO * capture.frameHeight
+        val viaNode = runCatching {
+            A11yNode.clickByKeys(a11yKeysFor(label), x.toFloat(), y.toFloat(), tolerance)
+        }.getOrDefault(false)
+        if (viaNode) {
+            RunnerState.clicks++
+            RunnerState.lastHit = label
+            LogBus.ok("无障碍节点命中「$label」@($x,$y)")
+            return true
+        }
+        return false
+    }
+
+    /** 标签 → 无障碍节点文案（命中不到即回退坐标点击） */
+    private fun a11yKeysFor(label: String): List<String> = when {
+        label.contains("关闭") -> listOf("关闭", "知道了", "完成", "收下", "跳过")
+        label.contains("允许") -> listOf("允许", "始终允许", "仅在使用中允许", "确定")
+        label.contains("继续免费听") -> listOf("继续免费听", "继续听", "继续")
+        label.contains("跳转") -> listOf("跳转", "去看看", "去浏览", "立即查看", "点击查看")
+        label.contains("点击浏览") -> listOf("点击浏览", "点击观看")
+        label.contains("开关") -> listOf("自动看广告", "自动领取")
+        label.contains("领取") -> listOf("领取", "立即领取", "领取奖励", "收下")
+        else -> listOf(label)
     }
 
     private fun back(label: String) {
