@@ -59,6 +59,29 @@ class KugouRunner(
     /** 额度耗尽弹窗存在但「取消」未定位到的连续轮次，达到上限后按终止态处理，避免空转卡死 */
     private var quotaCancelMiss = 0
 
+    // ---------------- v3.6.0：前置开关校验状态 ----------------
+
+    /** 已确认「自动看广告续时长」开关处于开启状态：确认后不再点击，避免反复切换 */
+    private var switchOnConfirmed = false
+
+    /** 已点击开关的次数，达到 [KugouConfig.switchMaxTries] 即放弃点击 */
+    private var switchTries = 0
+
+    /** 刚点过开关，等下一张新截图做二次确认（不复用点击前的旧帧） */
+    private var switchPendingConfirm = false
+
+    /** 上次开关校验时间，配合 [KugouConfig.switchRecheckMs] 做复查冷却 */
+    private var switchCheckedAt = 0L
+
+    /** 开关状态不可靠判定或已达尝试上限：本轮彻底放弃点击开关 */
+    private var switchGaveUp = false
+
+    /** 奖励浮层底部按钮在点击冷却表里的键名 */
+    private val rewardBrowseKey = "点击浏览"
+
+    /** 奖励浮层存在但底部「点击浏览」连续未识别的轮次，超过上限后放行常规流程 */
+    private var rewardPanelMiss = 0
+
     private val maxRounds = if (dryRun) KugouConfig.simulateRounds else Int.MAX_VALUE
     private val startAt = System.currentTimeMillis()
 
@@ -147,8 +170,8 @@ class KugouRunner(
             State.IN_THIRD -> inThird(now, inQq)
             State.RETURNING -> returning(now, inQq)
             State.JUMP_WAIT -> jumpWait(now, inQq, inSys, fg, items)
-            State.SUCCESS_WAIT -> successWait(now, inQq, inSys)
-            State.DONE_PAGE -> donePage(now, inQq, inSys, items)
+            State.SUCCESS_WAIT -> successWait(now, inQq, inSys, items, w, h)
+            State.DONE_PAGE -> donePage(now, inQq, inSys, items, w, h)
             State.IDLE -> idle(frame, items, now, w, h, inQq, inSys)
         }
     }
@@ -222,12 +245,30 @@ class KugouRunner(
         return 800
     }
 
-    /** 已回主 App，等奖励到账提示 */
-    private suspend fun successWait(now: Long, inQq: Boolean, inSys: Boolean): Long {
+    /**
+     * 已回主 App，等奖励到账提示。
+     * v3.6.0：若奖励浮层已出现（含「再看1个广告，送惊喜奖励」面板），说明本条广告已看完，
+     * 不再死等「恭喜获得」超时记失败，直接转 IDLE 处理浮层底部「点击浏览」，继续下一条。
+     */
+    private suspend fun successWait(
+        now: Long,
+        inQq: Boolean,
+        inSys: Boolean,
+        items: List<OcrItem>,
+        w: Int,
+        h: Int
+    ): Long {
         if (!inQq && !inSys) {
             LogBus.info("用户切换到其他应用，本轮等待取消")
             state = State.IDLE
             return 500
+        }
+        if (KugouText.rewardPanelHit(items, w, h) != null) {
+            LogBus.ok("检测到奖励浮层，本条广告已完成，转入浮层底部「点击浏览」处理")
+            state = State.IDLE
+            missCount = 0
+            taskSwipes = 0
+            return 600
         }
         val waited = now - succWaitTs
         if (waited >= KugouConfig.successWaitMs) {
@@ -241,12 +282,24 @@ class KugouRunner(
         return KugouConfig.pollIntervalMs
     }
 
-    /** 已获得页：关闭广告页回到任务列表 */
-    private suspend fun donePage(now: Long, inQq: Boolean, inSys: Boolean, items: List<OcrItem>): Long {
+    /** 已获得页 / 奖励浮层页：优先点浮层底部「点击浏览」继续，其次关闭广告页回任务列表 */
+    private suspend fun donePage(
+        now: Long,
+        inQq: Boolean,
+        inSys: Boolean,
+        items: List<OcrItem>,
+        w: Int,
+        h: Int
+    ): Long {
         if (!inQq && !inSys) {
             state = State.IDLE
             doneCloseTries = 0
             return 500
+        }
+        // v3.6.0：该页命中 taskListKeys 时 tryCloseAd 会拒绝关闭，必须走底部按钮，否则会永久停住
+        val browse = KugouText.rewardBrowseHit(items, w, h)
+        if (browse != null && clickRewardBrowse(browse, w, h, now)) {
+            return KugouConfig.clickCooldownMs
         }
         if (doneCloseTries >= KugouConfig.doneCloseTries) {
             LogBus.info("已获得页关闭 $doneCloseTries 次无效，改按返回键")
@@ -293,6 +346,55 @@ class KugouRunner(
             return 600
         }
         if (taskJumpPending && now - taskJumpTs > KugouConfig.jumpWaitMs) taskJumpPending = false
+
+        // A1) v3.6.0 「免费听歌模式」页弹出的奖励浮层：
+        //     看完第一条广告回来后，酷狗会弹出奖励面板（「广告奖励待领取 / 再看1个广告，送惊喜奖励」），
+        //     要求点面板最底部的「点击浏览5秒，送惊喜奖励」才继续。旧版本这里只找关闭按钮，
+        //     而该面板文字命中 taskListKeys（含「点击浏览」），tryCloseAd 为保护免费听歌页拒绝关闭，
+        //     结果就永久停在奖励界面不动。现在识别到面板即点最底部按钮，点完按直跳型入口继续状态机。
+        if (inQq) {
+            val panel = KugouText.rewardPanelHit(items, w, h)
+            if (panel != null) {
+                val got = KugouText.successHit(items)
+                if (got != null && now - lastSuccessTs > KugouConfig.successDedupMs) {
+                    lastSuccessTs = now
+                    successCount++
+                    failStreak = 0
+                    LogBus.ok("🎉 成功第 $successCount 条：检测到「${got.text}」")
+                }
+                val browse = KugouText.rewardBrowseHit(items, w, h)
+                if (browse != null) {
+                    rewardPanelMiss = 0
+                    if (clickRewardBrowse(browse, w, h, now)) return KugouConfig.clickCooldownMs
+                    // 按钮点击冷却中：面板还在，原地等待，绝不往别处乱点
+                    return KugouConfig.pollIntervalMs
+                }
+                // 浮层在但按钮这帧没认出来（OCR 漏行）：原地多等几轮，避免退回上一页或误点别的按钮
+                rewardPanelMiss++
+                if (rewardPanelMiss <= KugouConfig.rewardPanelMissLimit) {
+                    LogBus.info(
+                        "奖励浮层已出现（特征「${panel.text}」），底部「点击浏览」暂未识别，第 $rewardPanelMiss 次重试"
+                    )
+                    return KugouConfig.pollIntervalMs
+                }
+                LogBus.warn("奖励浮层连续 $rewardPanelMiss 轮未识别到底部「点击浏览」，放行常规流程处理")
+            }
+        }
+
+        // A0.5) v3.6.0 前置开关校验：任务页顶部「自动看广告续时长」必须为开启态。
+        //       放在所有任务点击之前：开关没开时任务行点了也不给时长，先确认开关。
+        //       有奖励浮层 / 到账提示 / 付费墙弹窗时跳过，避免把浮层文字误当任务页。
+        if (inQq && !inSys && !switchGaveUp &&
+            (switchPendingConfirm || (!switchOnConfirmed && now - switchCheckedAt >= KugouConfig.switchRecheckMs))
+        ) {
+            val blocked = KugouText.rewardPanelHit(items, w, h) != null ||
+                KugouText.successHit(items) != null ||
+                KugouText.quotaHit(items, w, h) != null
+            if (!blocked && KugouText.switchLabelHit(items, w, h) != null) {
+                val handled = ensureSwitchOn(frame, w, h, now)
+                if (handled > 0) return handled
+            }
+        }
 
         // A) 奖励到账提示：先于任何点击判定，避免又点一次跳转
         val succ = KugouText.successHit(items)
@@ -423,6 +525,117 @@ class KugouRunner(
             return KugouConfig.backWaitMs
         }
         return if (sameScreenRounds >= 3) KugouConfig.idlePollIntervalMs else KugouConfig.pollIntervalMs
+    }
+
+    /**
+     * v3.6.0：点击奖励浮层最底部的「点击浏览N秒，送惊喜奖励」按钮。
+     *
+     * 这是「看完第一条广告结束返回后停在奖励界面不动」的根因修复：旧版本只在该页找关闭按钮，
+     * 而浮层文字命中 taskListKeys（含「点击浏览」），tryCloseAd 为保护免费听歌页拒绝关闭，
+     * 于是永久停住。现在改为识别并点击底部按钮，点完按「直跳型入口」处理，
+     * 由 IDLE 的 A0 / C 分支接管进入第三方停留计时，继续走五阶段状态机。
+     *
+     * 落点双向夹紧：水平锁在屏幕中段（避开左右两侧会员横幅「￥1立即开通」），
+     * 垂直锁在按钮文字带内，确保不与页面底部会员横幅 / 右上角关闭位重叠。
+     */
+    private suspend fun clickRewardBrowse(browse: OcrItem, w: Int, h: Int, now: Long): Boolean {
+        if (w <= 0 || h <= 0) return false
+        val cd = lastClickAt[rewardBrowseKey] ?: 0L
+        if (now - cd < KugouConfig.rewardBrowseCooldownMs) return false
+        val bx = (browse.cx / w).coerceIn(KugouConfig.REWARD_BROWSE_CLAMP_X0, KugouConfig.REWARD_BROWSE_CLAMP_X1) * w
+        val by = (browse.cy / h).coerceIn(KugouConfig.REWARD_BROWSE_CLAMP_Y0, KugouConfig.REWARD_BROWSE_CLAMP_Y1) * h
+        LogBus.ok(
+            "⚡ 奖励浮层底部「${browse.text}」→ 点击继续看下一条广告" +
+                "（落点 ${(bx / w * 100).toInt()}%,${(by / h * 100).toInt()}%）"
+        )
+        val ok = tapAt(bx, by, rewardBrowseKey)
+        lastClickAt[rewardBrowseKey] = now
+        RunnerState.lastHit = rewardBrowseKey
+        if (!ok) return false
+        taskJumpPending = true
+        taskJumpTs = now
+        missCount = 0
+        taskSwipes = 0
+        doneCloseTries = 0
+        adPageRounds = 0
+        return true
+    }
+
+    /**
+     * v3.6.0 前置开关校验：确保任务页顶部「自动看广告续时长」处于开启状态。
+     *
+     * 判定与保险策略：
+     * 1) 开关状态靠像素彩色占比判定（OCR 只能读到标签文字，读不到开关形态）；
+     * 2) 判定「已开启」→ 立即结束，不做任何多余点击；
+     * 3) 判定「不确定」→ 也不点击，宁可跳过也不冒险把用户已开启的开关点成关闭；
+     * 4) 判定「未开启」→ 点击开关轨迹中心，点完不复用旧帧，等下一轮新截图做二次确认；
+     * 5) 二次确认仍未开启则重试，累计 [KugouConfig.switchMaxTries] 次后彻底停止点击，
+     *    并在 [KugouConfig.switchRecheckMs] 冷却期内不再校验，避免来回切换打扰用户。
+     *
+     * 返回 >0 表示本轮已处理、需要等待的毫秒数；0 表示无需等待、继续后续判定。
+     */
+    private suspend fun ensureSwitchOn(frame: Bitmap, w: Int, h: Int, now: Long): Long {
+        val ratio = KugouSwitch.colorRatio(frame, KugouConfig.SWITCH)
+        val st = KugouSwitch.state(frame, KugouConfig.SWITCH)
+        val pct = "%.2f".format(ratio)
+
+        if (switchPendingConfirm) {
+            // 二次确认：用点击之后的**新截图**复核，避免同一帧自证
+            switchPendingConfirm = false
+            switchCheckedAt = now
+            if (st == KugouSwitch.ON) {
+                switchOnConfirmed = true
+                LogBus.ok("前置校验二次确认通过：「自动看广告续时长」已开启（彩色占比 $pct），继续执行任务")
+                return 0
+            }
+            if (st == KugouSwitch.UNKNOWN) {
+                switchGaveUp = true
+                LogBus.warn("前置校验二次确认无法判定（彩色占比 $pct），为避免反复切换已停止点击开关，继续执行任务")
+                return 0
+            }
+            if (switchTries >= KugouConfig.switchMaxTries) {
+                switchGaveUp = true
+                LogBus.warn(
+                    "前置校验：已点击开关 $switchTries 次仍未确认开启（彩色占比 $pct），" +
+                        "停止点击以免反复切换，继续执行任务"
+                )
+                return 0
+            }
+            LogBus.warn("前置校验二次确认未通过（彩色占比 $pct），再点一次开关")
+        } else {
+            switchCheckedAt = now
+            when (st) {
+                KugouSwitch.ON -> {
+                    switchOnConfirmed = true
+                    LogBus.ok("前置校验：「自动看广告续时长」开关已开启（彩色占比 $pct），不做多余点击")
+                    return 0
+                }
+                KugouSwitch.UNKNOWN -> {
+                    LogBus.info("前置校验：「自动看广告续时长」开关状态不确定（彩色占比 $pct），本轮不点击（避免误关）")
+                    return 0
+                }
+                else -> {
+                    if (switchTries >= KugouConfig.switchMaxTries) {
+                        switchGaveUp = true
+                        LogBus.warn("前置校验：已尝试 $switchTries 次，放弃点击开关，继续执行任务")
+                        return 0
+                    }
+                }
+            }
+        }
+
+        switchTries++
+        val px = KugouConfig.SWITCH.cx * w
+        val py = KugouConfig.SWITCH.cy * h
+        LogBus.warn(
+            "前置校验：「自动看广告续时长」开关${KugouSwitch.stateName(st)}（彩色占比 $pct），" +
+                "点击开关开启（第 $switchTries/${KugouConfig.switchMaxTries} 次）" +
+                "@(${(px / w * 100).toInt()}%,${(py / h * 100).toInt()}%)"
+        )
+        tapAt(px, py, "自动看广告开关")
+        switchPendingConfirm = true
+        switchCheckedAt = now
+        return KugouConfig.clickCooldownMs
     }
 
     /**

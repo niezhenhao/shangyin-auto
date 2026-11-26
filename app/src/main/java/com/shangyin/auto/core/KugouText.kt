@@ -137,6 +137,70 @@ object KugouText {
     /** 系统跳转弹窗文案特征 */
     fun sysDialogHit(items: List<OcrItem>): String? = hitMarker(items, KugouConfig.sysDialogMarkers)
 
+    // ------------------------------------------------------------------
+    // v3.6.0：奖励浮层底部「点击浏览N秒，送惊喜奖励」续做按钮
+    // ------------------------------------------------------------------
+
+    /** 奖励浮层内部可能出现的关闭符号（只认 × 类，不认英文字母 x，避免误杀正文） */
+    private val glyphStrict = listOf('×', '✕', '✖')
+
+    /**
+     * 奖励浮层是否存在（免费听歌模式页看完一条广告后弹出的奖励面板）。
+     * 判据：文案命中 [KugouConfig.rewardPanelMarkers]，且中心落在 [KugouConfig.REWARD_DIALOG] 内。
+     * 限定 ROI 是为了避免任务列表页同名词条（如「做任务免费听」）误触发。
+     */
+    fun rewardPanelHit(items: List<OcrItem>, w: Int, h: Int): OcrItem? {
+        if (w <= 0 || h <= 0) return null
+        for (it in items) {
+            if (!KugouConfig.REWARD_DIALOG.contains(it.cx, it.cy, w, h)) continue
+            val n = norm(it.text)
+            if (n.isEmpty()) continue
+            if (KugouConfig.rewardPanelMarkers.any { it in n }) return it
+        }
+        return null
+    }
+
+    /**
+     * 奖励浮层最底部的「点击浏览N秒，送惊喜奖励」按钮。
+     *
+     * 必须同时满足：
+     * 1) 同帧存在奖励浮层特征（杜绝把任务列表页任务行当按钮）；
+     * 2) 文字中心落在 [KugouConfig.REWARD_BROWSE] 内（浮层最底部一条，已避开吸底任务条与会员横幅下沿）；
+     * 3) 文案含「点击浏览 / 点击观看」且含收益描述（送 / 再得 / 分钟 / 时长 …）；
+     * 4) 不含任何付费危险文案（￥ / 开通 / 连续包月 …），也不含任务行右侧按钮「去浏览 / 去观看」；
+     * 5) 原文不含 × 类关闭符号。
+     * 多条命中时取最靠下的一条。
+     */
+    fun rewardBrowseHit(items: List<OcrItem>, w: Int, h: Int): OcrItem? {
+        if (w <= 0 || h <= 0) return null
+        if (rewardPanelHit(items, w, h) == null) return null
+        return items.asSequence()
+            .filter { KugouConfig.REWARD_BROWSE.contains(it.cx, it.cy, w, h) }
+            .filter { !isPayDanger(it.text) }
+            .filter { item -> item.text.none { c -> c in glyphStrict } }
+            .filter { item ->
+                val n = norm(item.text)
+                n.isNotEmpty() &&
+                    KugouConfig.rewardBrowseKeys.any { it in n } &&
+                    KugouConfig.rewardBrowseGainKeys.any { it in n } &&
+                    "去浏览" !in n && "去观看" !in n
+            }
+            .maxByOrNull { it.cy }
+    }
+
+    /**
+     * 任务页顶部「自动看广告续时长」开关标签定位。
+     * OCR 只能拿到文字，开关本体在其右侧固定偏移处（见 [KugouConfig.SWITCH]），
+     * 这里先确认标签存在且位于 [KugouConfig.SWITCH_LABEL] 内，再允许点击开关。
+     */
+    fun switchLabelHit(items: List<OcrItem>, w: Int, h: Int): OcrItem? {
+        if (w <= 0 || h <= 0) return null
+        return items.asSequence()
+            .filter { KugouConfig.SWITCH_LABEL.contains(it.cx, it.cy, w, h) }
+            .filter { "自动看广告" in norm(it.text) }
+            .minByOrNull { kotlin.math.abs(it.cy - KugouConfig.SWITCH.cy * h) }
+    }
+
     /** 广告页「点击跳转后浏览N秒」CTA */
     fun jumpCtaHit(text: String): Boolean {
         val s = norm(text)

@@ -24,6 +24,7 @@ import com.shangyin.auto.ui.GuideDialog
 import com.shangyin.auto.util.IntegrityGuard
 import com.shangyin.auto.util.LogBus
 import com.shangyin.auto.util.ShizukuUtil
+import com.shangyin.auto.util.UpdateChecker
 import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
 
@@ -37,6 +38,8 @@ class MainActivity : AppCompatActivity() {
     private var lastBtnRunText = ""
     private var lastBtnQqRunText = ""
     private var lastBtnKgRunText = ""
+    /** 手动更新检测进行中：防止重复点击 */
+    private var checkingUpdate = false
 
     companion object {
         private const val KIND_RUN = 0
@@ -108,7 +111,7 @@ class MainActivity : AppCompatActivity() {
         // 关于卡片：版本号与标题栏保持一致，项目地址点击直达官方发布页
         val aboutVersion = "v" + runCatching {
             packageManager.getPackageInfo(packageName, 0).versionName
-        }.getOrDefault("3.5.0")
+        }.getOrDefault("3.7.0")
         b.tvAboutVersion.text = aboutVersion
         b.tvAboutRepo.setOnClickListener { openOfficialHome() }
 
@@ -148,9 +151,18 @@ class MainActivity : AppCompatActivity() {
         b.btnPermBattery.setOnClickListener { openBatterySettings() }
         b.btnPermAll.setOnClickListener { guidePermissions() }
         b.btnGuide.setOnClickListener { GuideDialog.show(this) }
+        b.btnUpdate.setOnClickListener { checkUpdateManually() }
 
         // 首次启动自动弹出使用说明；之后可从右上角「使用说明」再次打开
         GuideDialog.showIfFirstLaunch(this)
+
+        // 每次启动自动检测一次更新（异步、失败静默、同进程只跑一次）；
+        // 首次启动会弹使用说明，此时交给「说明关闭后检测」，避免两层弹窗叠加
+        b.root.postDelayed({
+            if (isFinishing) return@postDelayed
+            if (GuideDialog.isShowing()) return@postDelayed
+            UpdateChecker.checkOnLaunch(this)
+        }, 1200L)
 
         // 日志增量渲染：只追加新增行，避免每来一条日志就整屏重建文本
         lifecycleScope.launch {
@@ -377,6 +389,25 @@ class MainActivity : AppCompatActivity() {
                 awaitingAuth = false
                 LogBus.error("无法请求屏幕录制授权：${it.message}")
             }
+    }
+
+    /**
+     * 右上角「更新」按钮：自动检测失灵时的手动兜底。
+     * 强制刷新（不吃 6 小时缓存）、按钮进入加载态、失败提示具体原因。
+     */
+    private fun checkUpdateManually() {
+        if (checkingUpdate) return
+        checkingUpdate = true
+        b.btnUpdate.isEnabled = false
+        b.btnUpdate.alpha = 0.5f
+        b.btnUpdate.text = "检测中"
+        UpdateChecker.checkManual(this) {
+            checkingUpdate = false
+            if (isFinishing) return@checkManual
+            b.btnUpdate.isEnabled = true
+            b.btnUpdate.alpha = 1f
+            b.btnUpdate.text = "更新"
+        }
     }
 
     private fun stopAll() {

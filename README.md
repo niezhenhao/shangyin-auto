@@ -7,7 +7,7 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 不需要电脑、不需要数据线，全部在手机上完成：截图 → 离线中文 OCR → 匹配目标词 → 点击。
 
 - 包名：`com.shangyin.auto`
-- 版本：**3.5.0**（release 正式签名，内置防盗版校验）
+- 版本：**3.7.0**（release 正式签名，内置防盗版校验）
 - 最低系统：Android 8.0（API 26），推荐 Android 11+（无线调试启动 Shizuku 需要 11+）
 
 > 本软件**完全免费**，官方唯一发布地址是 GitHub 仓库 `niezhenhao/shangyin-auto`。
@@ -19,11 +19,21 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 
 | 方式 | 地址 |
 | --- | --- |
-| Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v3.5.0/ShangYin-v3.5.0-release.apk |
-| 仓库内直链（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v3.5.0-release.apk |
-| 仓库 Releases | https://github.com/niezhenhao/shangyin-auto/releases/tag/v3.5.0 |
+| Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v3.7.0/ShangYin-v3.7.0-release.apk |
+| 仓库内直链（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v3.7.0-release.apk |
+| 仓库 Releases | https://github.com/niezhenhao/shangyin-auto/releases/tag/v3.7.0 |
 
 安装前注意：若手机已装 1.0.0（debug 签名），请先卸载再装；2.0.0 及之后均为同一 release 签名，可直接覆盖升级。
+
+## 3.7.0 更新（启动自动检测 · 手动兜底）
+
+| 项 | 3.7.0 的变化 |
+| --- | --- |
+| 启动自动检测 | App 每次启动后自动检测一次新版本：进程启动即触发，异步执行不阻塞界面，同一进程生命周期内只跑一次，断网或请求失败完全静默 |
+| 手动兜底 | 主界面右上角新增「更新」按钮：跳过 6 小时缓存强制刷新，检测期间按钮置灰显示「检测中」，失败时 Toast 提示具体原因（地址无效 / 无法连接 / HTTP 状态码 / 解析失败等） |
+| 使用说明检测 | 保留「使用说明」关闭后的自动检测；首次启动弹出说明弹窗时，启动检测自动避让，避免两层弹窗叠加 |
+| 缓存策略 | 自动检测结果缓存 6 小时，避免频繁请求；手动检测不写缓存，两者互不干扰 |
+| 版本比较 | 逐段数字比较当前 versionName 与最新 Release tag，逻辑随版本号自动生效，不写死版本 |
 
 ## 3.5.0 更新（酷狗音乐 · 更新检测）
 
@@ -164,7 +174,7 @@ app/src/main/java/com/shangyin/auto/
 ├── util/
 │   ├── IntegrityGuard.kt  # 2.1.0 防盗版：签名 / 包名 / 注入痕迹校验
 │   ├── LogBus.kt
-│   ├── UpdateChecker.kt  # 3.5.0 版本更新检测（GitHub Release）
+│   ├── UpdateChecker.kt  # 版本更新检测（GitHub Release，启动自动 + 手动兜底）
 │   ├── ShizukuUtil.kt
 │   └── WirelessDebugScanner.kt
 ├── a11y/TapService.kt

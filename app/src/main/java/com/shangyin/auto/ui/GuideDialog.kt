@@ -15,6 +15,13 @@ object GuideDialog {
     private const val PREF = "shangyin_prefs"
     private const val KEY_AUTO_SHOWN = "guide_shown_v200"
 
+    @Volatile
+    private var showing = false
+
+    /** 使用说明弹窗是否正在显示：启动自动更新检测据此避让，避免两层弹窗叠加。 */
+    @JvmStatic
+    fun isShowing(): Boolean = showing
+
     /** 首次启动自动展示（只弹一次）。 */
     @JvmStatic
     fun showIfFirstLaunch(activity: Activity) {
@@ -35,12 +42,14 @@ object GuideDialog {
         binding.btnGuideClose.setOnClickListener { dialog.dismiss() }
         // 说明弹窗关闭后再做更新检测：不影响首次使用，失败也不打扰
         dialog.setOnDismissListener {
+            showing = false
             try {
                 UpdateChecker.checkAfterGuide(activity)
             } catch (e: Exception) {
                 // 静默忽略：更新检测永远不能影响正常使用
             }
         }
+        showing = true
         dialog.show()
     }
 }

@@ -123,6 +123,46 @@ object KugouConfig {
      */
     val BOTTOM_REWARD = Roi(0.10f, 0.95f, 0.955f, 1.000f)
 
+    /**
+     * v3.6.0 奖励浮层最底部「点击浏览N秒，送惊喜奖励」按钮（看完一条广告后继续续做的入口）。
+     *
+     * 真机 1200×2652 截图 OCR：「点击浏览5秒，送惊喜奖励」文字框 [297,2423]-[907,2476]，
+     * 中心 (0.5017, 0.9235)，即 x 0.2475~0.7558、y 0.9136~0.9336。
+     *
+     * 该按钮与任务页底部会员横幅处于同一屏高带（「连续包月1元」cy≈0.9257、
+     * 「￥1立即开通」cy≈0.9393），因此这里只框住按钮文字带（y 0.895~0.945，不含
+     * y≥0.955 的吸底任务条与 y≥0.948 的横幅下沿），并额外用「必须含『点击浏览』+
+     * 必须含收益描述 + 不含任何付费文案」三重文案条件区分，绝不与会员横幅混淆。
+     */
+    val REWARD_BROWSE = Roi(0.15f, 0.85f, 0.895f, 0.945f)
+
+    /**
+     * 奖励浮层按钮的点击落点夹紧区间：
+     * 水平锁在屏幕中段 0.40~0.60，左侧避开「连续包月1元」(x≤0.43)、
+     * 右侧避开「￥1立即开通」(x≥0.72) 与右下关闭位；垂直锁在按钮文字带内。
+     */
+    const val REWARD_BROWSE_CLAMP_X0 = 0.40f
+    const val REWARD_BROWSE_CLAMP_X1 = 0.60f
+    const val REWARD_BROWSE_CLAMP_Y0 = 0.905f
+    const val REWARD_BROWSE_CLAMP_Y1 = 0.940f
+
+    /**
+     * v3.6.0 任务页顶部「自动看广告续时长」开关的前置校验热区。
+     *
+     * 标签文字真机中心 (0.7283, 0.2662)（px [742,688]-[1006,724]，1200×2652）；
+     * 开关轨迹实测 x 1025~1110、y 680~735，归一化 x 0.854~0.925、y 0.256~0.277，
+     * 外扩为 [0.83,0.95]×[0.242,0.292]，与 y≤0.130 的「退出模式」关闭热区不重叠。
+     *
+     * 开关状态靠像素判定（OCR 拿不到开关开/关）：开启态轨迹填充品牌彩色，
+     * 彩色像素占比实测 0.31；关闭态为灰底白点，彩色占比实测 0.00。
+     */
+    val SWITCH_LABEL = Roi(0.45f, 0.90f, 0.240f, 0.300f)
+    val SWITCH = Roi(0.83f, 0.95f, 0.242f, 0.292f)
+
+    /** 开关彩色像素占比阈值：≥ ON 判定开启，≤ OFF 判定关闭，中间为「不确定」（不点击，避免误关） */
+    const val SWITCH_COLOR_ON = 0.15f
+    const val SWITCH_COLOR_OFF = 0.06f
+
     /** 关闭类目标名：只有这些目标允许落到右上角关闭热区，其余目标被二次校验拦下 */
     val closeRuleNames: Set<String> = setOf("×", "关闭", "关闭广告")
 
@@ -220,6 +260,23 @@ object KugouConfig {
     val successMarkers: List<String> = listOf(
         "恭喜获得", "已获得", "已到账", "奖励已发放", "获得免费时长"
     )
+
+    /**
+     * v3.6.0 奖励浮层特征词（免费听歌模式页看完广告后弹出的奖励面板）。
+     * 只有命中这些词且位于 [REWARD_DIALOG] 内，才认为当前是奖励面板，
+     * 之后才允许去 [REWARD_BROWSE] 找续做按钮，避免任务列表页文案误判。
+     */
+    val rewardPanelMarkers: List<String> = listOf(
+        "再看", "额外送", "送惊喜奖励", "恭喜获得", "已获得", "免费听歌", "送时长", "续时长"
+    )
+
+    /** 奖励浮层底部续做按钮的必须文案（「点击浏览5秒，送惊喜奖励」） */
+    val rewardBrowseKeys: List<String> = listOf("点击浏览", "点击观看")
+
+    /** 续做按钮必须同时携带的收益描述，用于排除无收益的纯说明文字 */
+    val rewardBrowseGainKeys: List<String> = listOf(
+        "送", "再得", "免费听", "惊喜", "奖励", "时长", "分钟"
+    )
     val taskPageMarkers: List<String> = listOf(
         "自动看广告续时长", "点击浏览", "去浏览", "去观看", "免费听歌模式", "了解详情", "领取"
     )
@@ -244,6 +301,23 @@ object KugouConfig {
     var successWaitMs: Long = 5000L
     var successDedupMs: Long = 12000L
     var doneCloseTries: Int = 3
+
+    // ---------------- v3.6.0 新增参数 ----------------
+
+    /** 奖励浮层底部「点击浏览」按钮的点击冷却：防止同一浮层被连点 */
+    var rewardBrowseCooldownMs: Long = 8000L
+
+    /** 奖励浮层在但底部按钮连续未识别时，原地等待的最大轮次，超过后放行常规流程 */
+    var rewardPanelMissLimit: Int = 4
+
+    /** 点击开关后等待 UI 落定的时间，随后立即抓帧做「二次确认」 */
+    var switchConfirmMs: Long = 900L
+
+    /** 单轮最多点击开关次数，达到即放弃点击（避免反复切换把已开启状态切回关闭） */
+    var switchMaxTries: Int = 2
+
+    /** 开关校验的复查冷却：确认开启后不再重复校验；未确认/放弃后至少间隔这么久才再判定 */
+    var switchRecheckMs: Long = 120000L
 
     /** 连续失败退避阶梯（毫秒） */
     val failBackoffMs: LongArray = longArrayOf(5000, 10000, 20000, 30000)

@@ -45,6 +45,9 @@ object UpdateChecker {
     }
     private val main = Handler(Looper.getMainLooper())
 
+    /** 启动自动检测的一次性闸门：同一进程生命周期内只放行一次 */
+    private val launchChecked = java.util.concurrent.atomic.AtomicBoolean(false)
+
     data class Info(
         val version: String,
         val notes: String,
@@ -80,6 +83,16 @@ object UpdateChecker {
             .map { part -> part.takeWhile { it.isDigit() } }
             .filter { it.isNotEmpty() }
             .mapNotNull { it.toIntOrNull() }
+    }
+
+    /**
+     * App 启动后调用：异步执行一次更新检测，不阻塞界面。
+     * - 同一进程生命周期内只执行一次（界面重建、Activity 重新创建都不重复触发）；
+     * - 内部复用 checkAfterGuide 的 6 小时缓存与失败静默策略，绝不打扰正常使用。
+     */
+    fun checkOnLaunch(activity: Activity) {
+        if (!launchChecked.compareAndSet(false, true)) return
+        checkAfterGuide(activity)
     }
 
     /**
@@ -131,23 +144,102 @@ object UpdateChecker {
         }
     }
 
-    /** 同步请求最新 Release；校验失败返回 null */
-    private fun fetch(): Info? {
-        val conn = (URL(API).openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = TIMEOUT_MS
-            readTimeout = TIMEOUT_MS
-            setRequestProperty("Accept", "application/vnd.github+json")
-            setRequestProperty("User-Agent", "shangyin-auto-update-check")
+    /**
+     * 手动检测（点击右上角「更新」按钮）：
+     * 1. 忽略 6 小时缓存与本地缓存版本，强制请求 GitHub 最新 Release；
+     * 2. 检测结束回调 onFinish(是否成功)，由调用方恢复按钮加载态；
+     * 3. 有新版本 → 弹窗；已是最新 → 轻提示；网络/服务异常 → 明确提示失败原因，不静默。
+     */
+    fun checkManual(activity: Activity, onFinish: (Boolean) -> Unit) {
+        val cur = currentVersion(activity)
+        if (cur.isBlank()) {
+            Toast.makeText(activity, "检测失败：无法读取当前版本号", Toast.LENGTH_SHORT).show()
+            onFinish(false)
+            return
+        }
+        io.execute {
+            var reason = ""
+            val info = fetchWithReason { reason = it }
+            main.post {
+                onFinish(info != null)
+                if (activity.isFinishing) return@post
+                if (info == null) {
+                    Toast.makeText(
+                        activity,
+                        "检测更新失败：" + reason.ifBlank { "网络不可用，请检查网络后重试" },
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@post
+                }
+                // 手动检测不写缓存：避免「使用说明关闭后自动检测」在 6 小时内重复弹出同一更新
+                if (compareVersion(info.version, cur) > 0) {
+                    showUpdateDialog(activity, info)
+                } else {
+                    Toast.makeText(activity, "当前已是最新版本 v$cur", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    /** 同步请求最新 Release；校验失败返回 null（自动检测不关心原因，静默处理） */
+    private fun fetch(): Info? = fetchWithReason(null)
+
+    /**
+     * 同步请求最新 Release。失败返回 null，并通过 onError 回传可读的失败原因；
+     * onError 为 null 时保持静默（自动检测路径）。
+     */
+    private fun fetchWithReason(onError: ((String) -> Unit)?): Info? {
+        val conn = try {
+            (URL(API).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = TIMEOUT_MS
+                readTimeout = TIMEOUT_MS
+                setRequestProperty("Accept", "application/vnd.github+json")
+                setRequestProperty("User-Agent", "shangyin-auto-update-check")
+            }
+        } catch (e: Exception) {
+            onError?.invoke("更新地址无效（" + e.javaClass.simpleName + "）")
+            return null
         }
         try {
-            if (conn.responseCode != 200) return null
-            val text = conn.inputStream.bufferedReader().use { it.readText() }
-            val json = JSONObject(text)
+            val code = try {
+                conn.responseCode
+            } catch (e: Exception) {
+                onError?.invoke("无法连接更新服务器（" + e.javaClass.simpleName + "）")
+                return null
+            }
+            if (code != 200) {
+                onError?.invoke(
+                    if (code == 403 || code == 429) {
+                        "请求过于频繁（HTTP $code），请稍后重试"
+                    } else {
+                        "更新服务器返回异常（HTTP $code）"
+                    }
+                )
+                return null
+            }
+            val text = try {
+                conn.inputStream.bufferedReader().use { it.readText() }
+            } catch (e: Exception) {
+                onError?.invoke("读取更新信息失败（" + e.javaClass.simpleName + "）")
+                return null
+            }
+            val json = try {
+                JSONObject(text)
+            } catch (e: Exception) {
+                onError?.invoke("更新信息解析失败")
+                return null
+            }
             val tag = json.optString("tag_name", "")
-            if (tag.isBlank()) return null
+            if (tag.isBlank()) {
+                onError?.invoke("未获取到有效版本号")
+                return null
+            }
             val version = tag.trim().removePrefix("v").removePrefix("V")
-            if (segments(version).isEmpty()) return null
+            if (segments(version).isEmpty()) {
+                onError?.invoke("未获取到有效版本号")
+                return null
+            }
 
             val body = json.optString("body", "").trim()
             val notes = body.split('\n')
