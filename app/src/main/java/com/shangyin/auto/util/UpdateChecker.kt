@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -28,9 +29,25 @@ object UpdateChecker {
 
     const val REPO = "niezhenhao/shangyin-auto"
 
+    /** 更新线路：GitHub 仓库（比对 latest Release 版本号） */
+    const val ROUTE_GITHUB = 0
+
+    /** 更新线路：Gitee 仓库（比对发行版版本号，取 APK 附件直链下载） */
+    const val ROUTE_GITEE = 1
+
+    /** Gitee 仓库（与 GitHub 侧同名同结构，公开仓库读接口支持匿名访问） */
+    const val GITEE_REPO = "hejncdjd/shangyin-auto"
+
+    /** Gitee 发行版页面：Gitee API 不可用时回退到此页面 */
+    const val GITEE_RELEASES_PAGE = "https://gitee.com/$GITEE_REPO/releases"
+
     private const val API = "https://api.github.com/repos/$REPO/releases/latest"
+
+    /** Gitee 发行版列表接口（返回数组，取版本号最大的一条） */
+    private const val GITEE_API = "https://gitee.com/api/v5/repos/$GITEE_REPO/releases"
     private const val PREF = "shangyin_prefs"
     private const val KEY_TS = "update_check_ts"
+    private const val KEY_ROUTE = "update_route"
     private const val KEY_VERSION = "update_check_version"
     private const val KEY_NOTES = "update_check_notes"
     private const val KEY_URL = "update_check_url"
@@ -179,6 +196,189 @@ object UpdateChecker {
                 }
             }
         }
+    }
+
+    /** 用户上次选择的更新线路（默认 GitHub 线路） */
+    fun savedRoute(ctx: Context): Int {
+        val r = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getInt(KEY_ROUTE, ROUTE_GITHUB)
+        return if (r == ROUTE_GITEE) ROUTE_GITEE else ROUTE_GITHUB
+    }
+
+    private fun saveRoute(ctx: Context, route: Int) {
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+            .edit().putInt(KEY_ROUTE, route).apply()
+    }
+
+    private val routeLabels = arrayOf(
+        "1. GitHub 仓库直链更新",
+        "2. Gitee 更新"
+    )
+
+    /**
+     * 右上角「更新」的第一步：选择更新线路。
+     * - 上次选过的线路默认高亮（记住选择）；
+     * - 带「取消」，取消则不回调，不发起任何更新动作；
+     * - 仅在点「确定」后回调 onPicked，并把选择写回本地。
+     */
+    fun showRouteChooser(activity: Activity, onPicked: (Int) -> Unit) {
+        if (activity.isFinishing) return
+        var picked = savedRoute(activity)
+        AlertDialog.Builder(activity)
+            .setTitle("选择更新线路")
+            .setSingleChoiceItems(routeLabels, picked) { _, which -> picked = which }
+            .setPositiveButton("确定") { _, _ ->
+                saveRoute(activity, picked)
+                onPicked(picked)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    /**
+     * 线路二：Gitee 更新。
+     * 1. 优先请求 Gitee 发行版 API，取版本号最大的非预发布发行版与当前版本比对；
+     * 2. 有新版本 → 弹窗展示版本与更新要点，「立即下载」直接用 APK 附件的 download_url；
+     * 3. 已是最新 → 轻提示；
+     * 4. Gitee API 不可用（网络失败 / 接口异常 / 无可用版本）→ 回退打开 Gitee 发行版页面。
+     */
+    fun startGiteeUpdate(activity: Activity, onSwitchGithub: () -> Unit) {
+        if (activity.isFinishing) return
+        val cur = currentVersion(activity)
+        Toast.makeText(activity, "正在向 Gitee 查询最新版本…", Toast.LENGTH_SHORT).show()
+        io.execute {
+            var reason = ""
+            val info = fetchGiteeWithReason { reason = it }
+            main.post {
+                if (activity.isFinishing) return@post
+                if (info == null) {
+                    // API 不可用：回退到发行版页面，保证用户仍能手动下载
+                    Toast.makeText(
+                        activity,
+                        "Gitee 接口不可用" + (if (reason.isBlank()) "" else "（$reason）") + "，将打开发行版页面",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    openGiteeReleases(activity, onSwitchGithub)
+                    return@post
+                }
+                if (compareVersion(info.version, cur) > 0) {
+                    showUpdateDialog(activity, info)
+                } else {
+                    Toast.makeText(activity, "当前已是最新版本 v$cur（Gitee）", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    /** 打开 Gitee 发行版页面；打不开时提示并保留切回 GitHub 线路的入口 */
+    private fun openGiteeReleases(activity: Activity, onSwitchGithub: () -> Unit) {
+        val ok = try {
+            activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(GITEE_RELEASES_PAGE)))
+            true
+        } catch (e: Exception) {
+            false
+        }
+        if (!ok) {
+            AlertDialog.Builder(activity)
+                .setTitle("Gitee 线路不可用")
+                .setMessage("无法打开 Gitee 发行版页面（$GITEE_RELEASES_PAGE），请改用 GitHub 线路。")
+                .setPositiveButton("改用 GitHub 线路") { _, _ -> onSwitchGithub() }
+                .setNegativeButton("关闭", null)
+                .show()
+        }
+    }
+
+    /**
+     * 请求 Gitee 发行版列表并挑出最新版本。失败返回 null 并通过 onError 回传可读原因。
+     * 公开仓库的读接口支持匿名访问，因此不带 access_token（避免令牌写入 APK 被反编译提取）。
+     */
+    private fun fetchGiteeWithReason(onError: ((String) -> Unit)?): Info? {
+        val conn = try {
+            (URL(GITEE_API).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = TIMEOUT_MS
+                readTimeout = TIMEOUT_MS
+                setRequestProperty("Accept", "application/json")
+                setRequestProperty("User-Agent", "shangyin-auto-update-check")
+            }
+        } catch (e: Exception) {
+            onError?.invoke("更新地址无效（" + e.javaClass.simpleName + "）")
+            return null
+        }
+        try {
+            val code = try {
+                conn.responseCode
+            } catch (e: Exception) {
+                onError?.invoke("无法连接 Gitee（" + e.javaClass.simpleName + "）")
+                return null
+            }
+            if (code != 200) {
+                onError?.invoke(
+                    if (code == 403 || code == 429) {
+                        "请求过于频繁（HTTP $code）"
+                    } else {
+                        "Gitee 接口返回异常（HTTP $code）"
+                    }
+                )
+                return null
+            }
+            val text = try {
+                conn.inputStream.bufferedReader().use { it.readText() }
+            } catch (e: Exception) {
+                onError?.invoke("读取 Gitee 发行版失败（" + e.javaClass.simpleName + "）")
+                return null
+            }
+            val arr = try {
+                JSONArray(text)
+            } catch (e: Exception) {
+                onError?.invoke("Gitee 发行版解析失败")
+                return null
+            }
+
+            var best: Info? = null
+            for (i in 0 until arr.length()) {
+                val rel = arr.optJSONObject(i) ?: continue
+                if (rel.optBoolean("prerelease", false)) continue
+                val tag = rel.optString("tag_name", "")
+                if (tag.isBlank()) continue
+                val version = tag.trim().removePrefix("v").removePrefix("V")
+                if (segments(version).isEmpty()) continue
+                val notes = rel.optString("body", "")
+                    .split('\n')
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .take(8)
+                    .joinToString("\n")
+                    .ifBlank { "修复问题并优化自动点击稳定性。" }
+                val cand = Info(version, notes, giteeApkUrl(rel))
+                val cur = best
+                if (cur == null || compareVersion(cand.version, cur.version) > 0) best = cand
+            }
+            if (best == null) {
+                onError?.invoke("Gitee 暂无可用发行版")
+                return null
+            }
+            return best
+        } finally {
+            conn.disconnect()
+        }
+    }
+
+    /** 取发行版里的 APK 附件下载直链；没有 APK 附件时退回该发行版的页面地址 */
+    private fun giteeApkUrl(rel: JSONObject): String {
+        // 附件字段在不同接口版本里可能叫 assets / attach_files，下载链接字段可能是 browser_download_url / download_url
+        for (key in arrayOf("assets", "attach_files")) {
+            val files = rel.optJSONArray(key) ?: continue
+            for (i in 0 until files.length()) {
+                val f = files.optJSONObject(i) ?: continue
+                val name = f.optString("name", "").ifBlank { f.optString("title", "") }
+                if (!name.endsWith(".apk", ignoreCase = true)) continue
+                val u = f.optString("browser_download_url", "")
+                    .ifBlank { f.optString("download_url", "") }
+                if (u.isNotBlank()) return u
+            }
+        }
+        return rel.optString("html_url", GITEE_RELEASES_PAGE)
+            .ifBlank { GITEE_RELEASES_PAGE }
     }
 
     /** 同步请求最新 Release；校验失败返回 null（自动检测不关心原因，静默处理） */

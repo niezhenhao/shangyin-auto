@@ -111,7 +111,7 @@ class MainActivity : AppCompatActivity() {
         // 关于卡片：版本号与标题栏保持一致，项目地址点击直达官方发布页
         val aboutVersion = "v" + runCatching {
             packageManager.getPackageInfo(packageName, 0).versionName
-        }.getOrDefault("3.8.0")
+        }.getOrDefault("3.9.1")
         b.tvAboutVersion.text = aboutVersion
         b.tvAboutRepo.setOnClickListener { openOfficialHome() }
 
@@ -392,10 +392,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 右上角「更新」按钮：自动检测失灵时的手动兜底。
-     * 强制刷新（不吃 6 小时缓存）、按钮进入加载态、失败提示具体原因。
+     * 右上角「更新」按钮：先选线路（GitHub / Gitee，记住上次选择），再执行对应更新动作。
+     * - 线路一：沿用 GitHub latest 比对（强制刷新、按钮加载态、失败提示原因）；
+     * - 线路二：Gitee 发行版比对，取 APK 附件直链下载，接口不可用时回退打开 Gitee 发行版页面。
      */
     private fun checkUpdateManually() {
+        if (checkingUpdate) return
+        UpdateChecker.showRouteChooser(this) { route ->
+            when (route) {
+                UpdateChecker.ROUTE_GITEE -> UpdateChecker.startGiteeUpdate(this) {
+                    // Gitee 发行版页面打不开时直接走 GitHub 线路，不用再点一次「更新」
+                    startGithubUpdate()
+                }
+                else -> startGithubUpdate()
+            }
+        }
+    }
+
+    /** 线路一：GitHub 仓库直链更新，强制刷新并用按钮加载态兜住重复点击 */
+    private fun startGithubUpdate() {
         if (checkingUpdate) return
         checkingUpdate = true
         b.btnUpdate.isEnabled = false

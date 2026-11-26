@@ -18,10 +18,10 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 不需要电脑、不需要数据线，全部在手机上完成：截图 → 离线中文 OCR → 匹配目标词 → 点击。
 
 - 包名：`com.shangyin.auto`
-- 版本：**3.8.0**（release 正式签名，内置防盗版校验）
+- 版本：**3.9.1**（release 正式签名，内置防盗版校验）
 - 最低系统：Android 8.0（API 26），推荐 Android 11+（无线调试启动 Shizuku 需要 11+）
 
-> 本软件**完全免费**，官方唯一发布地址是 GitHub 仓库 `niezhenhao/shangyin-auto`。
+> 本软件**完全免费**，官方发布地址为 GitHub 仓库 `niezhenhao/shangyin-auto` 与 Gitee 镜像仓库 `hejncdjd/shangyin-auto`（两处代码、历史 tag 完全一致）。
 > **任何人不得在闲鱼、淘宝、拼多多等电商或二手平台出售本软件或本安装包。**
 > 如果你是花钱买到的，请立即申请退款、向平台举报卖家，并在仓库提 issue 反馈。
 
@@ -30,11 +30,26 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 
 | 方式 | 地址 |
 | --- | --- |
-| Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v3.8.0/ShangYin-v3.8.0-release.apk |
-| 仓库内直链（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v3.8.0-release.apk |
-| 仓库 Releases | https://github.com/niezhenhao/shangyin-auto/releases/tag/v3.8.0 |
+| GitHub Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v3.9.1/ShangYin-v3.9.1-release.apk |
+| Gitee 发行版附件（国内推荐） | https://gitee.com/hejncdjd/shangyin-auto/releases/download/v3.9.1/ShangYin-v3.9.1-release.apk |
+| 仓库内直链（GitHub） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v3.9.1-release.apk |
+| 仓库内直链（Gitee） | https://gitee.com/hejncdjd/shangyin-auto/raw/main/dist/ShangYin-v3.9.1-release.apk |
+| GitHub Releases 页面 | https://github.com/niezhenhao/shangyin-auto/releases/tag/v3.9.1 |
+| Gitee 发行版页面 | https://gitee.com/hejncdjd/shangyin-auto/releases/tag/v3.9.1 |
 
 安装前注意：若手机已装 1.0.0（debug 签名），请先卸载再装；2.0.0 及之后均为同一 release 签名，可直接覆盖升级。
+
+## 3.9.1 更新（Gitee 更新线路）
+
+| 项 | 3.9.1 的变化 |
+| --- | --- |
+| 更新入口双线路 | 右上角「更新」先弹线路选择：1. GitHub 仓库直链更新　2. Gitee 更新，默认高亮上次选择并记住 |
+| Gitee 更新（替换蓝奏云） | 先请求 Gitee 发行版 API 比对最新版本号，有新版本直接用 APK 附件的 `download_url` 下载；原先带时效签名的蓝奏云直链整体下线 |
+| 接口不可用回退 | Gitee 接口异常 / 网络失败 / 无可用发行版时，自动回退打开 Gitee 发行版页面；页面也打不开则给出「改用 GitHub 线路」入口 |
+| 令牌安全 | 公开仓库读接口支持匿名访问，APK 内**不内置** Gitee 账号令牌，避免被反编译提取 |
+| GitHub 线路不变 | 线路一与启动自动检测（启动后 6 小时缓存、失败静默）逻辑保持原样 |
+| 双仓库同步 | 代码同步维护 GitHub `niezhenhao/shangyin-auto` 与 Gitee `hejncdjd/shangyin-auto`，目录结构与历史 tag 一致 |
+| 版本 | versionCode 40 / versionName 3.9.1，关于卡片版本兜底值同步为 3.9.1 |
 
 ## 3.8.0 更新（无障碍通道 · 汽水收尾修复）
 

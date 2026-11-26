@@ -23,8 +23,8 @@ android {
         applicationId = "com.shangyin.auto"
         minSdk = 26
         targetSdk = 34
-        versionCode = 38
-        versionName = "3.8.0"
+        versionCode = 40
+        versionName = "3.9.1"
     }
 
     signingConfigs {
