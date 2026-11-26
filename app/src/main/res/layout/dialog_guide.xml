@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/surface"
+    android:orientation="vertical"
+    android:paddingStart="20dp"
+    android:paddingTop="18dp"
+    android:paddingEnd="20dp"
+    android:paddingBottom="8dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="上音使用说明"
+        android:textColor="@color/ink"
+        android:textSize="19sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="只做识别与点击，不修改、不注入、不卸载任何应用"
+        android:textColor="@color/ink_secondary"
+        android:textSize="12sp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="360dp"
+        android:layout_marginTop="12dp"
+        android:scrollbars="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/CardTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="一、它做什么" />
+
+            <TextView
+                style="@style/BodyText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="1. 定时截取屏幕，用本地离线 OCR 识别画面文字。\n2. 识别到「领取奖励 / 继续观看 / 领取成功」且位于合理位置时，模拟一次点击。\n3. 点完自动冷却 2 秒，避免连点；没有目标就继续等，不抢操作。\n4. 如果顶部出现「关注 / 更多直播」，判定为误入直播间，执行一次返回键退出。\n5. 连续 5 次没识别到目标时，只在日志里提示一句，不会自动退出页面、不会自动关闭任何弹窗，循环继续跑。" />
+
+            <TextView
+                style="@style/CardTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="二、用到的权限与用途" />
+
+            <TextView
+                style="@style/BodyText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="· 屏幕录制（MediaProjection）\n  只在运行时逐帧截屏用于本机识别，画面不上传、不落盘、不保存历史截图。每次启动需你在系统弹窗中授权。\n\n· 悬浮窗（显示在其他应用上层）\n  用于显示运行状态与「暂停 / 模拟 / 停止」按钮，可拖动。不开也能运行，只是看不到悬浮条。\n\n· 无障碍服务（可选，兜底点击通道）\n  在没有 Shizuku 时用无障碍手势完成一次点击。只做点击，不读取你的输入内容、不上报任何数据。\n\n· Shizuku 授权（可选，优先点击通道）\n  通过 shell 执行一次 input tap，速度更快更稳。需要手机已装 Shizuku 并用无线调试启动。\n\n· 通知权限\n  前台服务常驻通知，保证后台运行时系统不随意回收。\n\n· 忽略电池优化（可选）\n  避免息屏或后台被系统冻结导致识别停止。\n\n· 网络\n  仅用于本地 OCR 模型下载与更新；识别过程完全离线。" />
+
+            <TextView
+                style="@style/CardTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="三、具体怎么操作" />
+
+            <TextView
+                style="@style/BodyText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="第 1 步 开权限：主界面点「一键检查」，按提示依次开启悬浮窗、无障碍（或 Shizuku）、电池白名单。\n\n第 2 步 进入目标页面：打开汽水音乐，进入听书/广告奖励页，让「继续观看」或「领取奖励」出现在屏幕上。\n\n第 3 步 回到上音，点「开始运行」，系统弹出屏幕录制授权时点「立即开始」。\n\n第 4 步 悬浮条会出现在左上角，可拖动。点「暂停」暂停识别，点「继续」恢复；点「停止」结束并释放屏幕录制。\n\n第 5 步 只想看识别效果不想真点：点「模拟试跑」，只识别并写日志，不产生点击。\n\n自检技巧：点主界面顶部「点击通道 · xxx」标签，可验证当前通道的 shell 与点击是否真的可用。" />
+
+            <TextView
+                style="@style/CardTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="四、注意事项" />
+
+            <TextView
+                style="@style/BodyText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="· 运行期间请勿在目标 App 内手动操作，手指点击会与自动点击冲突。\n· 点击发生在系统层，请确保自己有权操作的设备与账号。\n· 停止后屏幕录制会话立即释放，不会常驻录屏。" />
+        </LinearLayout>
+    </ScrollView>
+
+    <TextView
+        android:id="@+id/btnGuideClose"
+        android:layout_width="match_parent"
+        android:layout_height="46dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="6dp"
+        android:background="@drawable/bg_pill"
+        android:gravity="center"
+        android:text="我知道了"
+        android:textColor="@color/brand"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+</LinearLayout>

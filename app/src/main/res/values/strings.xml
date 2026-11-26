@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">上音</string>
+    <string name="subtitle">汽水音乐 · 自动看广告</string>
+    <string name="wireless_debug">Shizuku 无线调试启动</string>
+    <string name="a11y_label">上音·点击执行</string>
+    <string name="a11y_desc">用于代替 Shizuku 执行屏幕点击与返回操作。开启后即使 Shizuku 未运行，上音也能正常完成自动点击。</string>
+
+    <string name="btn_run">看广告启动</string>
+    <string name="btn_simulate">模拟跑一遍</string>
+    <string name="btn_float">悬浮窗</string>
+    <string name="btn_stop">停止</string>
+
+    <string name="perm_title">权限中心</string>
+    <string name="perm_screen">屏幕截图</string>
+    <string name="perm_overlay">悬浮窗</string>
+    <string name="perm_a11y">无障碍点击</string>
+    <string name="perm_battery">电池优化白名单</string>
+
+    <string name="log_title">运行日志</string>
+</resources>

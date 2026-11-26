@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand">#FF2F6BFF</color>
+    <color name="brand_dark">#FF1E4FD1</color>
+    <color name="ink">#FF111418</color>
+    <color name="ink_secondary">#FF6B7280</color>
+    <color name="surface">#FFFFFFFF</color>
+    <color name="surface_dark">#FF14161A</color>
+    <color name="bg">#FFF6F7F9</color>
+    <color name="bg_dark">#FF0C0E11</color>
+    <color name="ok">#FF19A974</color>
+    <color name="warn">#FFF59E0B</color>
+    <color name="bad">#FFE5484D</color>
+</resources>
