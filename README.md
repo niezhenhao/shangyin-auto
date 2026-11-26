@@ -18,7 +18,8 @@
 
 | 方式 | 地址 |
 | --- | --- |
-| 直接下载 APK（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v2.1.0-release.apk |
+| Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v2.1.0/ShangYin-v2.1.0-release.apk |
+| 仓库内直链（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v2.1.0-release.apk |
 | 仓库 Releases | https://github.com/niezhenhao/shangyin-auto/releases/tag/v2.1.0 |
 
 安装前注意：若手机已装 1.0.0（debug 签名），请先卸载再装；2.0.0 → 2.1.0 为同一 release 签名，可直接覆盖升级。
