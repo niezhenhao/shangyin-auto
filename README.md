@@ -7,7 +7,7 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 不需要电脑、不需要数据线，全部在手机上完成：截图 → 离线中文 OCR → 匹配目标词 → 点击。
 
 - 包名：`com.shangyin.auto`
-- 版本：**2.2.1**（release 正式签名，内置防盗版校验）
+- 版本：**3.1.0**（release 正式签名，内置防盗版校验）
 - 最低系统：Android 8.0（API 26），推荐 Android 11+（无线调试启动 Shizuku 需要 11+）
 
 > 本软件**完全免费**，官方唯一发布地址是 GitHub 仓库 `niezhenhao/shangyin-auto`。
@@ -19,11 +19,26 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 
 | 方式 | 地址 |
 | --- | --- |
-| Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v2.2.1/ShangYin-v2.2.1-release.apk |
-| 仓库内直链（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v2.2.1-release.apk |
-| 仓库 Releases | https://github.com/niezhenhao/shangyin-auto/releases/tag/v2.2.1 |
+| Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v3.1.0/ShangYin-v3.1.0-release.apk |
+| 仓库内直链（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v3.1.0-release.apk |
+| 仓库 Releases | https://github.com/niezhenhao/shangyin-auto/releases/tag/v3.1.0 |
 
 安装前注意：若手机已装 1.0.0（debug 签名），请先卸载再装；2.0.0 及之后均为同一 release 签名，可直接覆盖升级。
+
+## 3.1.0 更新（双平台 · 加时长误点修复）
+
+| 项 | 3.1.0 的变化 |
+| --- | --- |
+| QQ音乐支持 | 新增 QQ音乐自动看广告：五阶段状态机（待命 → 等待跳转 → 第三方停留 → 返回 → 成功页），按页面「浏览 N 秒」动态计算停留时长，返回无效时自动重新拉起 |
+| 悬浮条来源化 | 悬浮条标题按来源显示「汽水音乐 · 跑广告」或「QQ音乐 · 跑广告」，用哪个入口启动就只显示哪个 |
+| 单任务互斥 | 双平台任务互斥：界面启动前校验一次，`AutoService` 启动时再校验一次，跨入口 / 通知重启也拦得住 |
+| 加时长误点关闭 | 修复点击「加时长」时误触右上角关闭的问题：为「加时长」单开专用 ROI（x 0.70–0.90、y 0.105–0.185），与右上角关闭位置彻底分开 |
+| 关闭热区隔离 | 新增关闭热区（x 0.88–1.00、y 0.030–0.200），普通目标落点只要进入该区域就放弃本次点击并记日志，不盲点 |
+| 任务页护栏 | 识别任务列表页后，禁止任何关闭类目标点击、禁止「×」图形兜底，避免把免费畅听任务页关掉 |
+| 危险按钮排除 | 「确认关闭」「清零」「失去」等危险文案不再被「关闭」规则匹配，不会误点确认框 |
+| 误关恢复 | 一旦弹出「继续免费听」挽留弹窗，立即点它保住剩余时长 |
+| 点击衔接 | 点「加时长」这类直跳入口后，前台切走即进入第三方停留计时，不再卡在原状态空转 |
+| 落点安全化 | 普通目标点击点取文字框中心并夹紧在规则 ROI 内；「广告 丨 ×」这类宽框只取右侧 × 字形，不再点中「广告」二字 |
 
 ## 2.2.1 更新（图标 · 关于 · 悬浮窗强校验）
 
@@ -84,6 +99,10 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 | 排除词 | 秒 / 解锁 / 后可领取 / 第 |
 | 连续未命中 | 仅写日志（`maxMisses=8`），不返回、不退出页面 |
 | 直播间判定 | 顶部（y < 屏高×0.25）出现「关注 / 更多直播」时判定为误入，但 2.0.0 已不再自动退出 |
+| 加时长 ROI | 3.1.0：`加时长` 专用 (0.70–0.90)x(0.105–0.185)，与右上角关闭位不重叠 |
+| 关闭热区 | 3.1.0：普通目标落点落入 (0.88–1.00)x(0.030–0.200) 一律不点 |
+| QQ音乐阶段 | 3.1.0：IDLE → JUMP_WAIT → IN_THIRD → RETURNING → SUCCESS_WAIT → DONE_PAGE |
+| QQ音乐停留 | 3.1.0：按页面「浏览 N 秒」动态计算，含上下限保护 |
 
 ## 点击通道
 
@@ -110,7 +129,12 @@ app/src/main/java/com/shangyin/auto/
 │   ├── OcrEngine.kt       # ML Kit 离线中文 OCR
 │   ├── ScreenCapture.kt   # MediaProjection + VirtualDisplay + ImageReader
 │   ├── Clicker.kt         # Shizuku / 无障碍双通道点击
-│   └── AutoRunner.kt      # 主循环：截图 → OCR → 匹配 → 点击
+│   ├── AutoRunner.kt      # 汽水音乐主循环：截图 → OCR → 匹配 → 点击
+│   ├── QqRunner.kt        # 3.1.0 QQ音乐五阶段状态机
+│   ├── QqConfig.kt        # 3.1.0 QQ音乐规则表与 ROI 预设（含关闭热区）
+│   ├── QqText.kt          # 3.1.0 文案归一化 / 停留秒数 / 任务页判定
+│   ├── Platform.kt        # 3.1.0 双平台标识与互斥
+│   └── ForegroundApp.kt   # 3.1.0 前台 App 判定
 ├── ui/GuideDialog.kt      # 2.0.0 使用说明弹窗
 ├── util/
 │   ├── IntegrityGuard.kt  # 2.1.0 防盗版：签名 / 包名 / 注入痕迹校验

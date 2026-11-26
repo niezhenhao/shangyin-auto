@@ -9,6 +9,18 @@
     android:paddingTop="8dp"
     android:paddingBottom="8dp">
 
+    <!-- 启动来源标识：汽水音乐 / QQ音乐，两个入口各自只显示自己的悬浮条 -->
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:text="汽水音乐 · 跑广告"
+        android:textColor="@color/brand"
+        android:textSize="10sp"
+        android:textStyle="bold" />
+
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

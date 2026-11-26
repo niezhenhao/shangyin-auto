@@ -14,14 +14,17 @@ object RunnerState {
     enum class Mode { IDLE, RUNNING, SIMULATING }
 
     @Volatile var mode: Mode = Mode.IDLE
+    /** 当前运行的业务入口：悬浮条与主界面据此只展示对应那一项 */
+    @Volatile var platform: Platform = Platform.QISHUI
     @Volatile var rounds: Int = 0
     @Volatile var clicks: Int = 0
     @Volatile var lastHit: String = "-"
     @Volatile var paused: Boolean = false
     @Volatile var message: String = "待命"
 
-    fun reset(m: Mode) {
+    fun reset(m: Mode, p: Platform = Platform.QISHUI) {
         mode = m
+        platform = p
         rounds = 0
         clicks = 0
         lastHit = "-"

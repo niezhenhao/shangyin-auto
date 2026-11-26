@@ -18,6 +18,8 @@ import com.shangyin.auto.MainActivity
 import com.shangyin.auto.R
 import com.shangyin.auto.core.AutoRunner
 import com.shangyin.auto.core.OcrEngine
+import com.shangyin.auto.core.Platform
+import com.shangyin.auto.core.QqRunner
 import com.shangyin.auto.core.RunnerState
 import com.shangyin.auto.core.ScreenCapture
 import com.shangyin.auto.overlay.FloatingPanel
@@ -44,6 +46,7 @@ class AutoService : Service() {
         const val EXTRA_RESULT_CODE = "result_code"
         const val EXTRA_DATA = "data"
         const val EXTRA_DRY = "dry_run"
+        const val EXTRA_PLATFORM = "platform"
 
         private const val CHANNEL_ID = "shangyin_run"
         private const val NOTIF_ID = 1001
@@ -61,12 +64,14 @@ class AutoService : Service() {
             resultCode: Int,
             data: Intent,
             dryRun: Boolean,
-            simulate: Boolean = false
+            simulate: Boolean = false,
+            platform: Platform = Platform.QISHUI
         ): Intent = Intent(context, AutoService::class.java).apply {
             action = if (simulate) ACTION_START_SIM else ACTION_START
             putExtra(EXTRA_RESULT_CODE, resultCode)
             putExtra(EXTRA_DATA, data)
             putExtra(EXTRA_DRY, dryRun)
+            putExtra(EXTRA_PLATFORM, platform.id)
         }
 
         fun stopIntent(context: Context): Intent =
@@ -79,6 +84,7 @@ class AutoService : Service() {
     private var ocr: OcrEngine? = null
     private var panel: FloatingPanel? = null
     private var dryRun = false
+    private var platform: Platform = Platform.QISHUI
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -107,6 +113,18 @@ class AutoService : Service() {
         }
 
         if (action == ACTION_START || action == ACTION_START_SIM || action == ACTION_IDLE) {
+            val target = Platform.of(intent.getIntExtra(EXTRA_PLATFORM, Platform.QISHUI.id))
+            // 两项任务互斥：已在跑另一项时直接拒绝，避免共用采集与悬浮条
+            if (RunnerState.mode != RunnerState.Mode.IDLE && RunnerState.platform != target) {
+                LogBus.error("「${RunnerState.platform.label}自动看广告」正在运行，请先停止后再启动「${target.label}自动看广告」")
+                Toast.makeText(
+                    this,
+                    "「${RunnerState.platform.label}」正在运行，请先点击停止",
+                    Toast.LENGTH_LONG
+                ).show()
+                stopSelf()
+                return START_NOT_STICKY
+            }
             // 悬浮窗权限缺失时拒绝启动：无权限则悬浮控制条无法显示，用户无法暂停/停止
             if (!Settings.canDrawOverlays(this)) {
                 LogBus.error("未开启悬浮窗权限，已拒绝启动（请在权限中心开启）")
@@ -136,6 +154,7 @@ class AutoService : Service() {
             startWork(
                 resultCode,
                 data,
+                target,
                 simulate = action == ACTION_START_SIM,
                 dry = dryRun || action == ACTION_IDLE,
                 idle = action == ACTION_IDLE
@@ -148,12 +167,14 @@ class AutoService : Service() {
     private fun startWork(
         resultCode: Int,
         data: Intent,
+        target: Platform,
         simulate: Boolean,
         dry: Boolean,
         idle: Boolean = false
     ) {
         job?.cancel()
         capture?.stop()
+        platform = target
 
         val cap = ScreenCapture(this)
         if (!cap.start(resultCode, data)) {
@@ -169,8 +190,9 @@ class AutoService : Service() {
             simulate -> RunnerState.Mode.SIMULATING
             else -> RunnerState.Mode.RUNNING
         }
-        RunnerState.reset(mode)
+        RunnerState.reset(mode, target)
         LogBus.ok("屏幕采集已就绪 ${cap.width}x${cap.height}")
+        LogBus.info("本次任务：${target.label}自动看广告（${target.targetHint}）")
 
         // 二次校验：授权过程中用户可能已收回悬浮窗权限
         if (!Settings.canDrawOverlays(this)) {
@@ -191,7 +213,7 @@ class AutoService : Service() {
         val s = scope ?: CoroutineScope(SupervisorJob() + Dispatchers.Default).also { scope = it }
         job = s.launch {
             try {
-                AutoRunner(cap, ocr!!, dry || simulate).run()
+                runPlatform(cap, ocr!!, dry || simulate, target)
             } catch (t: Throwable) {
                 LogBus.error("运行异常：${t.message}")
             } finally {
@@ -200,6 +222,17 @@ class AutoService : Service() {
                 stopSelf()
             }
         }
+    }
+
+    /** 按启动来源选择业务主循环：汽水音乐沿用 AutoRunner，QQ音乐走 QQ 多阶段状态机 */
+    private suspend fun runPlatform(
+        cap: ScreenCapture,
+        ocr: OcrEngine,
+        dry: Boolean,
+        target: Platform
+    ) {
+        if (target == Platform.QQ) QqRunner(this, cap, ocr, dry).run()
+        else AutoRunner(cap, ocr, dry).run()
     }
 
     fun togglePause(): Boolean {
@@ -213,10 +246,11 @@ class AutoService : Service() {
         LogBus.info("切换为模拟模式")
         val s = scope ?: CoroutineScope(SupervisorJob() + Dispatchers.Default).also { scope = it }
         val cap = capture ?: return
-        RunnerState.reset(RunnerState.Mode.SIMULATING)
+        val cur = RunnerState.platform
+        RunnerState.reset(RunnerState.Mode.SIMULATING, cur)
         job = s.launch {
             try {
-                AutoRunner(cap, ocr ?: OcrEngine(), true).run()
+                runPlatform(cap, ocr ?: OcrEngine(), true, cur)
             } catch (t: Throwable) {
                 LogBus.error("模拟异常：${t.message}")
             } finally {
@@ -227,9 +261,15 @@ class AutoService : Service() {
     }
 
     private fun showPanelIfAllowed() {
-        if (panel?.isShowing() == true) return
+        val existing = panel
+        if (existing != null) {
+            if (existing.isShowing()) return
+            runCatching { existing.dispose() }
+            panel = null
+        }
         val p = FloatingPanel(
             context = this,
+            platform = platform,
             onPauseToggle = { togglePause() },
             onSimulate = { switchToSimulate() },
             onStop = { stopAll() }
@@ -284,14 +324,15 @@ class AutoService : Service() {
     }
 
     private fun buildNotification(): Notification {
+        val p = platform
         val pi = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat)
-            .setContentTitle("上音运行中")
-            .setContentText("正在识别并点击「领取奖励 / 继续观看」")
+            .setContentTitle("${p.label}自动看广告 · 运行中")
+            .setContentText("正在识别并点击「${p.targetHint}」")
             .setContentIntent(pi)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)

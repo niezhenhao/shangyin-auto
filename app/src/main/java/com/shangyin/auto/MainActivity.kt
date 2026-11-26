@@ -1,4 +1,4 @@
-package com.shangyin.auto
+﻿package com.shangyin.auto
 
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.shangyin.auto.a11y.TapService
 import com.shangyin.auto.core.Clicker
+import com.shangyin.auto.core.Platform
 import com.shangyin.auto.core.RunnerState
 import com.shangyin.auto.databinding.ActivityMainBinding
 import com.shangyin.auto.service.AutoService
@@ -30,9 +31,11 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var b: ActivityMainBinding
     private var pendingKind = KIND_RUN
+    private var pendingPlatform = Platform.QISHUI
     private var awaitingAuth = false
     private var lastRunStateText = ""
     private var lastBtnRunText = ""
+    private var lastBtnQqRunText = ""
 
     companion object {
         private const val KIND_RUN = 0
@@ -66,9 +69,15 @@ class MainActivity : AppCompatActivity() {
                 return@registerForActivityResult
             }
             val drive = when (pendingKind) {
-                KIND_SIM -> AutoService.buildIntent(this, result.resultCode, data, dryRun = true, simulate = true)
-                KIND_IDLE -> AutoService.buildIntent(this, result.resultCode, data, dryRun = true, simulate = true)
-                else -> AutoService.buildIntent(this, result.resultCode, data, dryRun = false)
+                KIND_SIM -> AutoService.buildIntent(
+                    this, result.resultCode, data, dryRun = true, simulate = true, platform = pendingPlatform
+                )
+                KIND_IDLE -> AutoService.buildIntent(
+                    this, result.resultCode, data, dryRun = true, simulate = true, platform = pendingPlatform
+                )
+                else -> AutoService.buildIntent(
+                    this, result.resultCode, data, dryRun = false, platform = pendingPlatform
+                )
             }
             if (pendingKind == KIND_IDLE) {
                 // 仅悬浮窗：先按待命模式起服务，再切模拟以外的一切由悬浮窗控制
@@ -98,7 +107,7 @@ class MainActivity : AppCompatActivity() {
         // 关于卡片：版本号与标题栏保持一致，项目地址点击直达官方发布页
         val aboutVersion = "v" + runCatching {
             packageManager.getPackageInfo(packageName, 0).versionName
-        }.getOrDefault("2.2.1")
+        }.getOrDefault("3.1.0")
         b.tvAboutVersion.text = aboutVersion
         b.tvAboutRepo.setOnClickListener { openOfficialHome() }
 
@@ -106,10 +115,18 @@ class MainActivity : AppCompatActivity() {
 
         requestNotificationIfNeeded()
 
-        b.btnRun.setOnClickListener { begin(KIND_RUN) }
-        b.btnSimulate.setOnClickListener { begin(KIND_SIM) }
-        b.btnFloat.setOnClickListener { begin(KIND_IDLE) }
+        // 汽水音乐入口
+        b.btnRun.setOnClickListener { begin(KIND_RUN, Platform.QISHUI) }
+        b.btnSimulate.setOnClickListener { begin(KIND_SIM, Platform.QISHUI) }
+        b.btnFloat.setOnClickListener { begin(KIND_IDLE, Platform.QISHUI) }
         b.btnStop.setOnClickListener { stopAll() }
+
+        // QQ音乐入口：与汽水音乐互斥，悬浮条只显示 QQ音乐
+        b.btnQqRun.setOnClickListener { begin(KIND_RUN, Platform.QQ) }
+        b.btnQqSimulate.setOnClickListener { begin(KIND_SIM, Platform.QQ) }
+        b.btnQqFloat.setOnClickListener { begin(KIND_IDLE, Platform.QQ) }
+        b.btnQqStop.setOnClickListener { stopAll() }
+
         b.btnWireless.setOnClickListener {
             startActivity(Intent(this, WirelessDebugActivity::class.java))
         }
@@ -218,19 +235,32 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshRunState() {
         val mode = RunnerState.mode
-        val text = when (mode) {
+        val running = mode != RunnerState.Mode.IDLE
+        val cur = RunnerState.platform
+        val detail = when (mode) {
             RunnerState.Mode.RUNNING ->
-                if (RunnerState.paused) "状态：已暂停｜已点击 ${RunnerState.clicks} 次｜最近命中 ${RunnerState.lastHit}"
-                else "状态：运行中｜已点击 ${RunnerState.clicks} 次｜最近命中 ${RunnerState.lastHit}"
-            RunnerState.Mode.SIMULATING -> "状态：模拟中｜已跑 ${RunnerState.rounds} 轮｜命中 ${RunnerState.clicks} 次"
-            RunnerState.Mode.IDLE -> "状态：待命"
+                if (RunnerState.paused) "已暂停｜已点击 ${RunnerState.clicks} 次｜最近命中 ${RunnerState.lastHit}"
+                else "运行中｜已点击 ${RunnerState.clicks} 次｜最近命中 ${RunnerState.lastHit}"
+            RunnerState.Mode.SIMULATING -> "模拟中｜已跑 ${RunnerState.rounds} 轮｜命中 ${RunnerState.clicks} 次"
+            RunnerState.Mode.IDLE -> "待命"
         }
-        b.tvRunState.text = text
-        lastRunStateText = text
-        val runLabel = if (mode == RunnerState.Mode.RUNNING) "运行中…" else getString(R.string.btn_run)
+
+        // 每条卡片只反映自己那一项，互不串台
+        val qishuiText = if (running && cur == Platform.QISHUI) "状态：$detail" else "状态：待命"
+        val qqText = if (running && cur == Platform.QQ) "状态：$detail" else "状态：待命"
+        b.tvRunState.text = qishuiText
+        b.tvQqState.text = qqText
+        lastRunStateText = qishuiText
+
+        val runLabel = if (running && cur == Platform.QISHUI) "运行中…" else getString(R.string.btn_run)
         if (runLabel != lastBtnRunText) {
             lastBtnRunText = runLabel
             b.btnRun.text = runLabel
+        }
+        val qqLabel = if (running && cur == Platform.QQ) "运行中…" else getString(R.string.btn_qq_run)
+        if (qqLabel != lastBtnQqRunText) {
+            lastBtnQqRunText = qqLabel
+            b.btnQqRun.text = qqLabel
         }
     }
 
@@ -282,7 +312,19 @@ class MainActivity : AppCompatActivity() {
 
     // ---------------- 动作 ----------------
 
-    private fun begin(kind: Int) {
+    private fun begin(kind: Int, platform: Platform = Platform.QISHUI) {
+        // 两项任务互斥：另一项在跑时必须先停止，避免共用采集与悬浮条
+        if (RunnerState.mode != RunnerState.Mode.IDLE && RunnerState.platform != platform) {
+            LogBus.warn("「${RunnerState.platform.label}自动看广告」正在运行，已拦截「${platform.label}自动看广告」启动")
+            AlertDialog.Builder(this)
+                .setTitle(R.string.busy_title)
+                .setMessage(getString(R.string.busy_msg, RunnerState.platform.label, platform.label))
+                .setPositiveButton("停止当前任务") { _, _ -> stopAll() }
+                .setNegativeButton("取消", null)
+                .show()
+            return
+        }
+
         if (Clicker.channel() == Clicker.Channel.NONE) {
             AlertDialog.Builder(this)
                 .setTitle("还不能执行点击")
@@ -313,6 +355,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         pendingKind = kind
+        pendingPlatform = platform
         awaitingAuth = true
         val mpm = getSystemService(MediaProjectionManager::class.java)
         runCatching { projectionLauncher.launch(mpm.createScreenCaptureIntent()) }
@@ -405,6 +448,10 @@ class MainActivity : AppCompatActivity() {
             b.btnRun.isEnabled = false
             b.btnSimulate.isEnabled = false
             b.btnFloat.isEnabled = false
+            b.btnQqRun.isEnabled = false
+            b.btnQqSimulate.isEnabled = false
+            b.btnQqFloat.isEnabled = false
+            b.btnQqStop.isEnabled = false
             b.btnWireless.isEnabled = false
         }
         LogBus.error("完整性校验失败：$reason")

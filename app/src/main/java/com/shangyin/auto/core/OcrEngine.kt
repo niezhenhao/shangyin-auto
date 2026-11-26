@@ -12,8 +12,24 @@ data class OcrItem(
     val text: String,
     val score: Float,
     val cx: Float,
-    val cy: Float
-)
+    val cy: Float,
+    /** 文字框四边（采集帧像素坐标），缺省 0 表示未知 */
+    val left: Float = 0f,
+    val top: Float = 0f,
+    val right: Float = 0f,
+    val bottom: Float = 0f
+) {
+    val boxWidth: Float get() = (right - left).coerceAtLeast(0f)
+    val boxHeight: Float get() = (bottom - top).coerceAtLeast(0f)
+    val hasBox: Boolean get() = boxWidth > 0f && boxHeight > 0f
+
+    /**
+     * 宽文字框内的右侧锚点：OCR 常把「广告丨×」识别成一整行，
+     * 此时全框中心落在「广告」二字上会点空，必须取框内右侧的 × 字形位置。
+     */
+    fun rightAnchor(ratio: Float = 0.80f): Float =
+        if (hasBox) left + boxWidth * ratio.coerceIn(0f, 1f) else cx
+}
 
 /**
  * 离线中文 OCR（ML Kit）。
@@ -55,7 +71,11 @@ class OcrEngine {
                         text = line.text,
                         score = score,
                         cx = box.exactCenterX() * inv,
-                        cy = box.exactCenterY() * inv
+                        cy = box.exactCenterY() * inv,
+                        left = box.left * inv,
+                        top = box.top * inv,
+                        right = box.right * inv,
+                        bottom = box.bottom * inv
                     )
                 )
             }

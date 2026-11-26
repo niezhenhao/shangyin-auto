@@ -9,6 +9,8 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import com.shangyin.auto.R
+import com.shangyin.auto.core.Platform
 import com.shangyin.auto.core.RunnerState
 import com.shangyin.auto.databinding.ViewFloatingBinding
 import com.shangyin.auto.util.LogBus
@@ -29,6 +31,7 @@ import kotlinx.coroutines.launch
  */
 class FloatingPanel(
     private val context: Context,
+    private val platform: Platform,
     private val onPauseToggle: () -> Boolean,
     private val onSimulate: () -> Unit,
     private val onStop: () -> Unit
@@ -49,6 +52,10 @@ class FloatingPanel(
     fun show() {
         if (binding != null) return
         val b = ViewFloatingBinding.inflate(LayoutInflater.from(context))
+        // 悬浮条只标识本次启动来源，两项任务互斥不会共用一条
+        b.tvTitle.text = context.getString(
+            if (platform == Platform.QQ) R.string.float_title_qq else R.string.float_title_qishui
+        )
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         else

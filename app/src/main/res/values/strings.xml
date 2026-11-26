@@ -1,15 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">上音</string>
-    <string name="subtitle">汽水音乐 · 自动看广告</string>
+    <string name="subtitle">汽水音乐 · QQ音乐 · 自动看广告</string>
     <string name="wireless_debug">Shizuku 无线调试启动</string>
     <string name="a11y_label">上音·点击执行</string>
     <string name="a11y_desc">用于代替 Shizuku 执行屏幕点击与返回操作。开启后即使 Shizuku 未运行，上音也能正常完成自动点击。</string>
 
-    <string name="btn_run">看广告启动</string>
+    <string name="qishui_title">汽水音乐自动看广告</string>
+    <string name="qishui_hint">识别「领取奖励 / 继续观看 / 领取成功」并自动点击，误入直播间自动退出。</string>
+    <string name="btn_run">汽水音乐看广告启动</string>
     <string name="btn_simulate">模拟跑一遍</string>
     <string name="btn_float">悬浮窗</string>
     <string name="btn_stop">停止</string>
+
+    <string name="qq_title">QQ音乐自动看广告</string>
+    <string name="qq_hint">识别「看广告 / 点击跳转后浏览N秒 / 跳过广告 / 关闭」并自动点击；跳转第三方后按秒停留，回到 QQ音乐 领取免费听歌。</string>
+    <string name="btn_qq_run">QQ音乐看广告启动</string>
+
+    <string name="float_title_qishui">汽水音乐 · 跑广告</string>
+    <string name="float_title_qq">QQ音乐 · 跑广告</string>
+
+    <string name="busy_title">已有任务在运行</string>
+    <string name="busy_msg">当前正在运行「%1$s」自动看广告。\n\n「汽水音乐自动看广告」与「QQ音乐自动看广告」不能同时启动，悬浮控制条也只显示当前正在运行的那一项。请先点击「停止」，再启动「%2$s」。</string>
 
     <string name="perm_title">权限中心</string>
     <string name="perm_screen">屏幕截图</string>
@@ -18,8 +30,8 @@
     <string name="perm_battery">电池优化白名单</string>
 
     <string name="about_title">关于</string>
-    <string name="about_desc">上音是一款针对汽水音乐「看广告领奖励」的自动化辅助工具：自动识别界面上的「领取奖励 / 继续观看」并完成点击，把重复操作交给程序。所有识别与操作均在本机完成，不上传截图、账号或任何个人数据。</string>
-    <string name="about_features">主要功能：自动看广告领奖励 · 悬浮控制条（暂停 / 模拟 / 停止）· 无障碍点击与 Shizuku 双通道 · 实时运行日志 · 屏幕截图权限按次授权。</string>
+    <string name="about_desc">上音是一款针对汽水音乐、QQ音乐「看广告领奖励」的自动化辅助工具：自动识别界面上的「领取奖励 / 继续观看 / 领取成功」或「看广告 / 点击跳转后浏览N秒」并完成点击，把重复操作交给程序。所有识别与操作均在本机完成，不上传截图、账号或任何个人数据。</string>
+    <string name="about_features">主要功能：汽水音乐自动看广告领奖励 · QQ音乐自动看广告免费听歌 · 悬浮控制条（暂停 / 模拟 / 停止，按启动来源只显示当前任务）· 无障碍点击与 Shizuku 双通道 · 实时运行日志 · 屏幕截图权限按次授权。</string>
     <string name="about_free">完全免费 · 开源 · 无广告 · 无内购，官方仅在本项目地址发布；任何电商、二手平台的售卖均为盗卖，请勿购买。</string>
     <string name="about_author_label">作者</string>
     <string name="about_author">niezhenhao</string>
@@ -28,7 +40,7 @@
     <string name="about_repo_url">https://github.com/niezhenhao/shangyin-auto</string>
 
     <string name="overlay_required_title">请先开启悬浮窗权限</string>
-    <string name="overlay_required_msg">上音运行期间需要在汽水音乐上层显示悬浮控制条（暂停 / 模拟 / 停止），未开启悬浮窗权限时无法正常启动。\n\n请到「权限中心 · 悬浮窗」点击「去开启」授权后再试。</string>
+    <string name="overlay_required_msg">上音运行期间需要在目标音乐 App 上层显示悬浮控制条（暂停 / 模拟 / 停止），未开启悬浮窗权限时无法正常启动。\n\n请到「权限中心 · 悬浮窗」点击「去开启」授权后再试。</string>
     <string name="overlay_required_open">去开启</string>
 
     <string name="log_title">运行日志</string>

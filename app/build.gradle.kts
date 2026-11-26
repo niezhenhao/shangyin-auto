@@ -1,4 +1,4 @@
-import java.io.FileInputStream
+﻿import java.io.FileInputStream
 import java.util.Properties
 
 plugins {
@@ -23,8 +23,8 @@ android {
         applicationId = "com.shangyin.auto"
         minSdk = 26
         targetSdk = 34
-        versionCode = 22
-        versionName = "2.2.1"
+        versionCode = 31
+        versionName = "3.1.0"
     }
 
     signingConfigs {
