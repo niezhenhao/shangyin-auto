@@ -7,7 +7,7 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 不需要电脑、不需要数据线，全部在手机上完成：截图 → 离线中文 OCR → 匹配目标词 → 点击。
 
 - 包名：`com.shangyin.auto`
-- 版本：**3.2.0**（release 正式签名，内置防盗版校验）
+- 版本：**3.5.0**（release 正式签名，内置防盗版校验）
 - 最低系统：Android 8.0（API 26），推荐 Android 11+（无线调试启动 Shizuku 需要 11+）
 
 > 本软件**完全免费**，官方唯一发布地址是 GitHub 仓库 `niezhenhao/shangyin-auto`。
@@ -19,11 +19,21 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 
 | 方式 | 地址 |
 | --- | --- |
-| Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v3.2.0/ShangYin-v3.2.0-release.apk |
-| 仓库内直链（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v3.2.0-release.apk |
-| 仓库 Releases | https://github.com/niezhenhao/shangyin-auto/releases/tag/v3.2.0 |
+| Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v3.5.0/ShangYin-v3.5.0-release.apk |
+| 仓库内直链（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v3.5.0-release.apk |
+| 仓库 Releases | https://github.com/niezhenhao/shangyin-auto/releases/tag/v3.5.0 |
 
 安装前注意：若手机已装 1.0.0（debug 签名），请先卸载再装；2.0.0 及之后均为同一 release 签名，可直接覆盖升级。
+
+## 3.5.0 更新（酷狗音乐 · 更新检测）
+
+| 项 | 3.5.0 的变化 |
+| --- | --- |
+| 酷狗音乐支持 | 新增酷狗音乐自动看广告，与 QQ音乐同一套五阶段状态机（待命 → 等待跳转 → 第三方停留 → 返回 → 成功页），关键词覆盖「点击浏览N秒」「去浏览」「了解详情」「进入详情页或第三方应用」「点击浏览5秒再得30分钟」「自动看广告续时长」 |
+| 三平台互斥 | 汽水音乐 / QQ音乐 / 酷狗音乐三入口互斥，界面与服务双处校验；悬浮条按启动来源显示「酷狗音乐 · 跑广告」等 |
+| 酷狗危险隔离 | 「退出模式」「￥1立即开通」等会员横幅与退出位进入硬拦截，非关闭类目标落点仍做关闭热区二次校验 |
+| 更新检测 | 「使用说明」关闭后自动检测新版本：有新版弹窗显示版本号与更新要点，点「立即下载」跳浏览器下载官方 APK；已是最新仅轻提示；断网或请求失败静默跳过 |
+| 版本比较 | 逐段数字比较当前 versionName 与最新 Release tag，逻辑随版本号自动生效，不写死版本；结果缓存 6 小时，避免每次启动都请求 |
 
 ## 3.2.0 更新（免费额度耗尽弹窗处理）
 
@@ -145,12 +155,16 @@ app/src/main/java/com/shangyin/auto/
 │   ├── QqRunner.kt        # 3.1.0 QQ音乐五阶段状态机
 │   ├── QqConfig.kt        # 3.1.0 QQ音乐规则表与 ROI 预设（含关闭热区）
 │   ├── QqText.kt          # 3.1.0 文案归一化 / 停留秒数 / 任务页判定
-│   ├── Platform.kt        # 3.1.0 双平台标识与互斥
+│   ├── KugouRunner.kt     # 3.5.0 酷狗音乐五阶段状态机
+│   ├── KugouConfig.kt     # 3.5.0 酷狗规则表与 ROI 预设
+│   ├── KugouText.kt       # 3.5.0 酷狗文案归一化与页面判定
+│   ├── Platform.kt        # 3.1.0 三平台标识与互斥
 │   └── ForegroundApp.kt   # 3.1.0 前台 App 判定
 ├── ui/GuideDialog.kt      # 2.0.0 使用说明弹窗
 ├── util/
 │   ├── IntegrityGuard.kt  # 2.1.0 防盗版：签名 / 包名 / 注入痕迹校验
 │   ├── LogBus.kt
+│   ├── UpdateChecker.kt  # 3.5.0 版本更新检测（GitHub Release）
 │   ├── ShizukuUtil.kt
 │   └── WirelessDebugScanner.kt
 ├── a11y/TapService.kt

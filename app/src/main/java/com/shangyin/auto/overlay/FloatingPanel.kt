@@ -54,7 +54,11 @@ class FloatingPanel(
         val b = ViewFloatingBinding.inflate(LayoutInflater.from(context))
         // 悬浮条只标识本次启动来源，两项任务互斥不会共用一条
         b.tvTitle.text = context.getString(
-            if (platform == Platform.QQ) R.string.float_title_qq else R.string.float_title_qishui
+            when (platform) {
+                Platform.QQ -> R.string.float_title_qq
+                Platform.KUGOU -> R.string.float_title_kugou
+                else -> R.string.float_title_qishui
+            }
         )
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY

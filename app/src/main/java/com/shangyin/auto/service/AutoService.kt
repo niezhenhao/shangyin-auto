@@ -19,6 +19,7 @@ import com.shangyin.auto.R
 import com.shangyin.auto.core.AutoRunner
 import com.shangyin.auto.core.OcrEngine
 import com.shangyin.auto.core.Platform
+import com.shangyin.auto.core.KugouRunner
 import com.shangyin.auto.core.QqRunner
 import com.shangyin.auto.core.RunnerState
 import com.shangyin.auto.core.ScreenCapture
@@ -231,8 +232,11 @@ class AutoService : Service() {
         dry: Boolean,
         target: Platform
     ) {
-        if (target == Platform.QQ) QqRunner(this, cap, ocr, dry).run()
-        else AutoRunner(cap, ocr, dry).run()
+        when (target) {
+            Platform.QQ -> QqRunner(this, cap, ocr, dry).run()
+            Platform.KUGOU -> KugouRunner(this, cap, ocr, dry).run()
+            else -> AutoRunner(cap, ocr, dry).run()
+        }
     }
 
     fun togglePause(): Boolean {

@@ -5,9 +5,11 @@ import android.content.Context
 import android.os.Build
 import androidx.appcompat.app.AlertDialog
 import com.shangyin.auto.databinding.DialogGuideBinding
+import com.shangyin.auto.util.UpdateChecker
 
 /**
  * 使用说明弹窗：首次启动自动弹出一次，之后可从主界面「使用说明」再次打开。
+ * 关闭后追加一次软件更新检测（短时缓存，网络失败静默跳过）。
  */
 object GuideDialog {
     private const val PREF = "shangyin_prefs"
@@ -31,6 +33,14 @@ object GuideDialog {
         val dialog = AlertDialog.Builder(activity).setView(binding.root).create()
         dialog.setCanceledOnTouchOutside(true)
         binding.btnGuideClose.setOnClickListener { dialog.dismiss() }
+        // 说明弹窗关闭后再做更新检测：不影响首次使用，失败也不打扰
+        dialog.setOnDismissListener {
+            try {
+                UpdateChecker.checkAfterGuide(activity)
+            } catch (e: Exception) {
+                // 静默忽略：更新检测永远不能影响正常使用
+            }
+        }
         dialog.show()
     }
 }

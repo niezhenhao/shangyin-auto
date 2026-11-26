@@ -11,9 +11,10 @@ enum class Platform(
     val targetHint: String
 ) {
     QISHUI(0, "汽水音乐", "com.luna.music", "领取奖励 / 继续观看 / 领取成功"),
-    QQ(1, "QQ音乐", "com.tencent.qqmusic", "看广告 / 点击跳转后浏览N秒 / 跳过广告 / 关闭");
+    QQ(1, "QQ音乐", "com.tencent.qqmusic", "看广告 / 点击跳转后浏览N秒 / 跳过广告 / 关闭"),
+    KUGOU(2, "酷狗音乐", "com.kugou.android", "自动看广告续时长 / 去浏览 / 了解详情 / 关闭");
 
     companion object {
-        fun of(id: Int): Platform = if (id == QQ.id) QQ else QISHUI
+        fun of(id: Int): Platform = entries.firstOrNull { it.id == id } ?: QISHUI
     }
 }

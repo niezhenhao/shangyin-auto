@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private var lastRunStateText = ""
     private var lastBtnRunText = ""
     private var lastBtnQqRunText = ""
+    private var lastBtnKgRunText = ""
 
     companion object {
         private const val KIND_RUN = 0
@@ -107,7 +108,7 @@ class MainActivity : AppCompatActivity() {
         // 关于卡片：版本号与标题栏保持一致，项目地址点击直达官方发布页
         val aboutVersion = "v" + runCatching {
             packageManager.getPackageInfo(packageName, 0).versionName
-        }.getOrDefault("3.2.0")
+        }.getOrDefault("3.5.0")
         b.tvAboutVersion.text = aboutVersion
         b.tvAboutRepo.setOnClickListener { openOfficialHome() }
 
@@ -126,6 +127,12 @@ class MainActivity : AppCompatActivity() {
         b.btnQqSimulate.setOnClickListener { begin(KIND_SIM, Platform.QQ) }
         b.btnQqFloat.setOnClickListener { begin(KIND_IDLE, Platform.QQ) }
         b.btnQqStop.setOnClickListener { stopAll() }
+
+        // 酷狗音乐入口：与汽水音乐 / QQ音乐互斥，悬浮条只显示酷狗音乐
+        b.btnKgRun.setOnClickListener { begin(KIND_RUN, Platform.KUGOU) }
+        b.btnKgSimulate.setOnClickListener { begin(KIND_SIM, Platform.KUGOU) }
+        b.btnKgFloat.setOnClickListener { begin(KIND_IDLE, Platform.KUGOU) }
+        b.btnKgStop.setOnClickListener { stopAll() }
 
         b.btnWireless.setOnClickListener {
             startActivity(Intent(this, WirelessDebugActivity::class.java))
@@ -248,8 +255,10 @@ class MainActivity : AppCompatActivity() {
         // 每条卡片只反映自己那一项，互不串台
         val qishuiText = if (running && cur == Platform.QISHUI) "状态：$detail" else "状态：待命"
         val qqText = if (running && cur == Platform.QQ) "状态：$detail" else "状态：待命"
+        val kgText = if (running && cur == Platform.KUGOU) "状态：$detail" else "状态：待命"
         b.tvRunState.text = qishuiText
         b.tvQqState.text = qqText
+        b.tvKgState.text = kgText
         lastRunStateText = qishuiText
 
         val runLabel = if (running && cur == Platform.QISHUI) "运行中…" else getString(R.string.btn_run)
@@ -261,6 +270,11 @@ class MainActivity : AppCompatActivity() {
         if (qqLabel != lastBtnQqRunText) {
             lastBtnQqRunText = qqLabel
             b.btnQqRun.text = qqLabel
+        }
+        val kgLabel = if (running && cur == Platform.KUGOU) "运行中…" else getString(R.string.btn_kugou_run)
+        if (kgLabel != lastBtnKgRunText) {
+            lastBtnKgRunText = kgLabel
+            b.btnKgRun.text = kgLabel
         }
     }
 
@@ -452,6 +466,10 @@ class MainActivity : AppCompatActivity() {
             b.btnQqSimulate.isEnabled = false
             b.btnQqFloat.isEnabled = false
             b.btnQqStop.isEnabled = false
+            b.btnKgRun.isEnabled = false
+            b.btnKgSimulate.isEnabled = false
+            b.btnKgFloat.isEnabled = false
+            b.btnKgStop.isEnabled = false
             b.btnWireless.isEnabled = false
         }
         LogBus.error("完整性校验失败：$reason")
