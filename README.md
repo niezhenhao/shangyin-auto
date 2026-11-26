@@ -2,7 +2,7 @@
 
 # 上音（ShangYin）
 
-把 PC 端 `qishui-auto` 的 ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
+把 PC 端 `qishui-auto` ：https://github.com/niezhenhao/qishuiNZH-auto，的 ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 不需要电脑、不需要数据线，全部在手机上完成：截图 → 离线中文 OCR → 匹配目标词 → 点击。
 
 - 包名：`com.shangyin.auto`
