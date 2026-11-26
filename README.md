@@ -125,5 +125,4 @@ keyPassword=******
 - 从 1.0.0（debug 签名）升级到 2.0.0（release 签名）因签名不同，需先卸载旧版再安装；
 - Shizuku 无线调试启动依赖 Shizuku 应用本身，未安装时只能用无障碍通道；
 - APK 约 44MB，主要是 ML Kit 中文 OCR 离线模型。
-*（内容由AI生成，仅供参考）*
 
