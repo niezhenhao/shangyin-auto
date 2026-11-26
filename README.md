@@ -9,6 +9,16 @@
 - 版本：**2.0.0**（release 正式签名）
 - 最低系统：Android 8.0（API 26），推荐 Android 11+（无线调试启动 Shizuku 需要 11+）
 
+
+## 下载安装
+
+| 方式 | 地址 |
+| --- | --- |
+| 直接下载 APK（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v2.0.0-release.apk |
+| 仓库 Releases | https://github.com/niezhenhao/shangyin-auto/releases/tag/v2.0.0 |
+
+安装前注意：若手机已装 1.0.0（debug 签名），请先卸载再装 2.0.0，否则会提示签名冲突。
+
 ## 2.0.0 更新
 
 | 项 | 2.0.0 的变化 |
