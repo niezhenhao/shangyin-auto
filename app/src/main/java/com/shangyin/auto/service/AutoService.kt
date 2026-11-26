@@ -10,6 +10,8 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.provider.Settings
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.shangyin.auto.MainActivity
@@ -105,6 +107,14 @@ class AutoService : Service() {
         }
 
         if (action == ACTION_START || action == ACTION_START_SIM || action == ACTION_IDLE) {
+            // 悬浮窗权限缺失时拒绝启动：无权限则悬浮控制条无法显示，用户无法暂停/停止
+            if (!Settings.canDrawOverlays(this)) {
+                LogBus.error("未开启悬浮窗权限，已拒绝启动（请在权限中心开启）")
+                Toast.makeText(this, "未开启悬浮窗权限，请在权限中心开启后再试", Toast.LENGTH_LONG).show()
+                RunnerState.stop()
+                stopSelf()
+                return START_NOT_STICKY
+            }
             // Android 14 要求先进入前台，再获取 MediaProjection
             if (!startForegroundCompat()) {
                 stopSelf()
@@ -161,6 +171,14 @@ class AutoService : Service() {
         }
         RunnerState.reset(mode)
         LogBus.ok("屏幕采集已就绪 ${cap.width}x${cap.height}")
+
+        // 二次校验：授权过程中用户可能已收回悬浮窗权限
+        if (!Settings.canDrawOverlays(this)) {
+            LogBus.error("悬浮窗权限已关闭，本次启动已中止")
+            Toast.makeText(this, "悬浮窗权限已关闭，已停止运行", Toast.LENGTH_LONG).show()
+            stopAll()
+            return
+        }
 
         showPanelIfAllowed()
         updateNotification()

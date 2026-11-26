@@ -95,6 +95,13 @@ class MainActivity : AppCompatActivity() {
             packageManager.getPackageInfo(packageName, 0).versionName
         }.getOrDefault("1.0")
 
+        // 关于卡片：版本号与标题栏保持一致，项目地址点击直达官方发布页
+        val aboutVersion = "v" + runCatching {
+            packageManager.getPackageInfo(packageName, 0).versionName
+        }.getOrDefault("2.2.1")
+        b.tvAboutVersion.text = aboutVersion
+        b.tvAboutRepo.setOnClickListener { openOfficialHome() }
+
         b.tvLog.movementMethod = ScrollingMovementMethod()
 
         requestNotificationIfNeeded()
@@ -294,8 +301,11 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        // 悬浮窗权限是运行前提：未开启时悬浮控制条无法显示，直接拦截启动
         if (!Settings.canDrawOverlays(this)) {
-            LogBus.warn("未开启悬浮窗权限，本次不显示悬浮控制条")
+            LogBus.warn("未开启悬浮窗权限，已拦截启动")
+            showOverlayRequiredDialog()
+            return
         }
 
         if (awaitingAuth) {
@@ -329,6 +339,16 @@ class MainActivity : AppCompatActivity() {
         } catch (t: Throwable) {
             LogBus.error("启动失败：${t.message}")
         }
+    }
+
+    /** 悬浮窗权限缺失：统一拦截提示，避免无权状态下空跑 */
+    private fun showOverlayRequiredDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.overlay_required_title)
+            .setMessage(R.string.overlay_required_msg)
+            .setPositiveButton(R.string.overlay_required_open) { _, _ -> openOverlaySettings() }
+            .setNegativeButton("取消", null)
+            .show()
     }
 
     private fun openOverlaySettings() {

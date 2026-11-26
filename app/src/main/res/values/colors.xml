@@ -11,4 +11,5 @@
     <color name="ok">#FF19A974</color>
     <color name="warn">#FFF59E0B</color>
     <color name="bad">#FFE5484D</color>
+    <color name="ic_launcher_background">#FF0D3C74</color>
 </resources>

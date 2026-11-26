@@ -7,7 +7,7 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 不需要电脑、不需要数据线，全部在手机上完成：截图 → 离线中文 OCR → 匹配目标词 → 点击。
 
 - 包名：`com.shangyin.auto`
-- 版本：**2.1.0**（release 正式签名，内置防盗版校验）
+- 版本：**2.2.1**（release 正式签名，内置防盗版校验）
 - 最低系统：Android 8.0（API 26），推荐 Android 11+（无线调试启动 Shizuku 需要 11+）
 
 > 本软件**完全免费**，官方唯一发布地址是 GitHub 仓库 `niezhenhao/shangyin-auto`。
@@ -19,11 +19,21 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 
 | 方式 | 地址 |
 | --- | --- |
-| Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v2.1.0/ShangYin-v2.1.0-release.apk |
-| 仓库内直链（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v2.1.0-release.apk |
-| 仓库 Releases | https://github.com/niezhenhao/shangyin-auto/releases/tag/v2.1.0 |
+| Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v2.2.1/ShangYin-v2.2.1-release.apk |
+| 仓库内直链（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v2.2.1-release.apk |
+| 仓库 Releases | https://github.com/niezhenhao/shangyin-auto/releases/tag/v2.2.1 |
 
-安装前注意：若手机已装 1.0.0（debug 签名），请先卸载再装；2.0.0 → 2.1.0 为同一 release 签名，可直接覆盖升级。
+安装前注意：若手机已装 1.0.0（debug 签名），请先卸载再装；2.0.0 及之后均为同一 release 签名，可直接覆盖升级。
+
+## 2.2.1 更新（图标 · 关于 · 悬浮窗强校验）
+
+| 项 | 2.2.1 的变化 |
+| --- | --- |
+| 应用图标 | 重做自适应图标前景与背景，补齐 `roundIcon`，桌面 / 通知栏 / 最近任务图标统一为新的「上音」标识 |
+| 关于卡片 | 主界面新增「关于」卡片：版本号、作者、项目地址；项目地址点击直达官方发布页，方便核对正版来源 |
+| 悬浮窗强校验 | 悬浮窗权限改为运行前提：未开启时点击启动会被拦截并弹窗引导到「权限中心 · 悬浮窗」授权，不再空跑 |
+| 服务端拒启 | `AutoService` 收到启动指令时同样校验悬浮窗权限，缺失即拒绝拉起自动化并提示原因 |
+| 授权后二次校验 | 屏幕采集授权返回时再校验一次，若期间权限被收回则立即停止，避免悬浮条消失后无法暂停 / 停止 |
 
 ## 2.1.0 更新（防盗版）
 
