@@ -19,6 +19,7 @@ import com.shangyin.auto.R
 import com.shangyin.auto.core.AutoRunner
 import com.shangyin.auto.core.OcrEngine
 import com.shangyin.auto.core.Platform
+import com.shangyin.auto.core.CloudRunner
 import com.shangyin.auto.core.KugouRunner
 import com.shangyin.auto.core.QqRunner
 import com.shangyin.auto.core.RunnerState
@@ -235,6 +236,7 @@ class AutoService : Service() {
         when (target) {
             Platform.QQ -> QqRunner(this, cap, ocr, dry).run()
             Platform.KUGOU -> KugouRunner(this, cap, ocr, dry).run()
+            Platform.CLOUD -> CloudRunner(this, cap, ocr, dry).run()
             else -> AutoRunner(cap, ocr, dry).run()
         }
     }

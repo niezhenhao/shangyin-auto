@@ -18,7 +18,7 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 不需要电脑、不需要数据线，全部在手机上完成：截图 → 离线中文 OCR → 匹配目标词 → 点击。
 
 - 包名：`com.shangyin.auto`
-- 版本：**3.9.1**（release 正式签名，内置防盗版校验）
+- 版本：**3.9.2**（release 正式签名，内置防盗版校验）
 - 最低系统：Android 8.0（API 26），推荐 Android 11+（无线调试启动 Shizuku 需要 11+）
 
 > 本软件**完全免费**，官方发布地址为 GitHub 仓库 `niezhenhao/shangyin-auto` 与 Gitee 镜像仓库 `hejncdjd/shangyin-auto`（两处代码、历史 tag 完全一致）。
@@ -30,13 +30,25 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 
 | 方式 | 地址 |
 | --- | --- |
-| GitHub Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v3.9.1/ShangYin-v3.9.1-release.apk |
-| Gitee 发行版附件（国内推荐） | https://gitee.com/hejncdjd/shangyin-auto/releases/download/v3.9.1/ShangYin-v3.9.1-release.apk |
-| 仓库内直链（GitHub） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v3.9.1-release.apk |
-| GitHub Releases 页面 | https://github.com/niezhenhao/shangyin-auto/releases/tag/v3.9.1 |
-| Gitee 发行版页面 | https://gitee.com/hejncdjd/shangyin-auto/releases/tag/v3.9.1 |
+| GitHub Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v3.9.2/ShangYin-v3.9.2-release.apk |
+| Gitee 发行版附件（国内推荐） | https://gitee.com/hejncdjd/shangyin-auto/releases/download/v3.9.2/ShangYin-v3.9.2-release.apk |
+| 仓库内直链（GitHub） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v3.9.2-release.apk |
+| GitHub Releases 页面 | https://github.com/niezhenhao/shangyin-auto/releases/tag/v3.9.2 |
+| Gitee 发行版页面 | https://gitee.com/hejncdjd/shangyin-auto/releases/tag/v3.9.2 |
 
 安装前注意：若手机已装 1.0.0（debug 签名），请先卸载再装；2.0.0 及之后均为同一 release 签名，可直接覆盖升级。
+
+## 3.9.2 更新（网易云音乐 · 自动看广告）
+
+| 项 | 3.9.2 的变化 |
+| --- | --- |
+| 网易云音乐支持 | 主界面「酷狗音乐自动看广告」卡片下方新增「网易云音乐自动看广告」卡片，与 QQ音乐同一套跳转五阶段状态机：任务页点跳转 CTA → 前台包名判定已跳第三方 → 停留计时 → 按返回回网易云 → 收尾 |
+| 专属目标词 | 按真机截图校准网易云专属词：「观看领奖励 / 去观看 / 点击跳转APP停留N秒 / 进入落地页查看详情」，与 QQ音乐、酷狗的关键词表完全独立，互不串用 |
+| 坐标独立 | 任务行右侧按钮、页面顶部入口、奖励弹窗（「再看一个视频，额外畅听」卡片）ROI 全部按网易云截图重新测绘，不沿用 QQ音乐坐标；弹窗内「赢全天畅听」与「观看领奖励」左右并排，靠右侧锚点区分，不会误点左侧按钮 |
+| 看完继续下一轮 | 广告完成返回网易云后，自动识别弹窗下方「观看领奖励」红色按钮并点击，进入下一条广告；同一弹窗 12 秒内不重复计次，未命中则按退避间隔轮询 |
+| 付费硬拦截 | 「开通黑胶」「开通会员」「赢全天畅听」「续费」「￥」等付费 / 会员文案列入危险词与危险区，命中即停并点亮终止态，绝不点击 |
+| 四平台互斥 | 汽水音乐 / QQ音乐 / 酷狗音乐 / 网易云音乐四入口互斥，界面与服务层双处校验；悬浮条按启动来源显示「网易云音乐 · 跑广告」 |
+| 版本 | versionCode 41 / versionName 3.9.2，关于卡片版本兜底值同步为 3.9.2 |
 
 ## 3.9.1 更新（Gitee 更新线路）
 
