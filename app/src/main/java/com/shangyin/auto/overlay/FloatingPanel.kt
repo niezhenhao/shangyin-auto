@@ -57,6 +57,7 @@ class FloatingPanel(
             when (platform) {
                 Platform.QQ -> R.string.float_title_qq
                 Platform.KUGOU -> R.string.float_title_kugou
+                Platform.CLOUD -> R.string.float_title_cloud
                 else -> R.string.float_title_qishui
             }
         )

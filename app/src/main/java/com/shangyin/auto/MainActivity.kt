@@ -38,6 +38,7 @@ class MainActivity : AppCompatActivity() {
     private var lastBtnRunText = ""
     private var lastBtnQqRunText = ""
     private var lastBtnKgRunText = ""
+    private var lastBtnCloudRunText = ""
     /** 手动更新检测进行中：防止重复点击 */
     private var checkingUpdate = false
 
@@ -111,7 +112,7 @@ class MainActivity : AppCompatActivity() {
         // 关于卡片：版本号与标题栏保持一致，项目地址点击直达官方发布页
         val aboutVersion = "v" + runCatching {
             packageManager.getPackageInfo(packageName, 0).versionName
-        }.getOrDefault("3.9.1")
+        }.getOrDefault("3.9.2")
         b.tvAboutVersion.text = aboutVersion
         b.tvAboutRepo.setOnClickListener { openOfficialHome() }
 
@@ -136,6 +137,12 @@ class MainActivity : AppCompatActivity() {
         b.btnKgSimulate.setOnClickListener { begin(KIND_SIM, Platform.KUGOU) }
         b.btnKgFloat.setOnClickListener { begin(KIND_IDLE, Platform.KUGOU) }
         b.btnKgStop.setOnClickListener { stopAll() }
+
+        // 网易云音乐入口：与汽水音乐 / QQ音乐 / 酷狗音乐互斥，悬浮条只显示网易云音乐
+        b.btnCloudRun.setOnClickListener { begin(KIND_RUN, Platform.CLOUD) }
+        b.btnCloudSimulate.setOnClickListener { begin(KIND_SIM, Platform.CLOUD) }
+        b.btnCloudFloat.setOnClickListener { begin(KIND_IDLE, Platform.CLOUD) }
+        b.btnCloudStop.setOnClickListener { stopAll() }
 
         b.btnWireless.setOnClickListener {
             startActivity(Intent(this, WirelessDebugActivity::class.java))
@@ -287,6 +294,11 @@ class MainActivity : AppCompatActivity() {
         if (kgLabel != lastBtnKgRunText) {
             lastBtnKgRunText = kgLabel
             b.btnKgRun.text = kgLabel
+        }
+        val cloudLabel = if (running && cur == Platform.CLOUD) "运行中…" else getString(R.string.btn_cloud_run)
+        if (cloudLabel != lastBtnCloudRunText) {
+            lastBtnCloudRunText = cloudLabel
+            b.btnCloudRun.text = cloudLabel
         }
     }
 
@@ -516,6 +528,10 @@ class MainActivity : AppCompatActivity() {
             b.btnKgSimulate.isEnabled = false
             b.btnKgFloat.isEnabled = false
             b.btnKgStop.isEnabled = false
+            b.btnCloudRun.isEnabled = false
+            b.btnCloudSimulate.isEnabled = false
+            b.btnCloudFloat.isEnabled = false
+            b.btnCloudStop.isEnabled = false
             b.btnWireless.isEnabled = false
         }
         LogBus.error("完整性校验失败：$reason")
