@@ -33,7 +33,6 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 | GitHub Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v3.9.1/ShangYin-v3.9.1-release.apk |
 | Gitee 发行版附件（国内推荐） | https://gitee.com/hejncdjd/shangyin-auto/releases/download/v3.9.1/ShangYin-v3.9.1-release.apk |
 | 仓库内直链（GitHub） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v3.9.1-release.apk |
-| 仓库内直链（Gitee） | https://gitee.com/hejncdjd/shangyin-auto/raw/main/dist/ShangYin-v3.9.1-release.apk |
 | GitHub Releases 页面 | https://github.com/niezhenhao/shangyin-auto/releases/tag/v3.9.1 |
 | Gitee 发行版页面 | https://gitee.com/hejncdjd/shangyin-auto/releases/tag/v3.9.1 |
 
