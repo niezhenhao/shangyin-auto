@@ -7,7 +7,7 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 不需要电脑、不需要数据线，全部在手机上完成：截图 → 离线中文 OCR → 匹配目标词 → 点击。
 
 - 包名：`com.shangyin.auto`
-- 版本：**3.1.0**（release 正式签名，内置防盗版校验）
+- 版本：**3.2.0**（release 正式签名，内置防盗版校验）
 - 最低系统：Android 8.0（API 26），推荐 Android 11+（无线调试启动 Shizuku 需要 11+）
 
 > 本软件**完全免费**，官方唯一发布地址是 GitHub 仓库 `niezhenhao/shangyin-auto`。
@@ -19,11 +19,21 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 
 | 方式 | 地址 |
 | --- | --- |
-| Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v3.1.0/ShangYin-v3.1.0-release.apk |
-| 仓库内直链（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v3.1.0-release.apk |
-| 仓库 Releases | https://github.com/niezhenhao/shangyin-auto/releases/tag/v3.1.0 |
+| Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v3.2.0/ShangYin-v3.2.0-release.apk |
+| 仓库内直链（手机浏览器可下） | https://github.com/niezhenhao/shangyin-auto/raw/main/dist/ShangYin-v3.2.0-release.apk |
+| 仓库 Releases | https://github.com/niezhenhao/shangyin-auto/releases/tag/v3.2.0 |
 
 安装前注意：若手机已装 1.0.0（debug 签名），请先卸载再装；2.0.0 及之后均为同一 release 签名，可直接覆盖升级。
+
+## 3.2.0 更新（免费额度耗尽弹窗处理）
+
+| 项 | 3.2.0 的变化 |
+| --- | --- |
+| 额度耗尽识别 | 识别「今日免费听歌额度已用完 / 每日限量体验 N 次」弹窗，不再被误判成任务列表页继续空点 |
+| 付费按钮零点击 | 新增付费文案硬拦截：开通 / 会员 / 元 / 1.88 / 畅听 / VIP / ￥ / 续费 / 支付 / 购买 / 特惠 / 首月 / 充值，一律不点 |
+| 只点取消 | 弹窗出现后仅允许点击「取消」热区内的取消按钮，其余位置全部禁止点击 |
+| 安全终止 | 关闭弹窗后立刻停止本轮任务，日志与悬浮条显示「今日免费听歌额度已用完，已停止」，不再死循环卡住 |
+| 兜底保护 | 连续 3 轮定位不到「取消」也放弃点击，直接进入终止态，不会乱点 |
 
 ## 3.1.0 更新（双平台 · 加时长误点修复）
 
@@ -103,6 +113,8 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 | 关闭热区 | 3.1.0：普通目标落点落入 (0.88–1.00)x(0.030–0.200) 一律不点 |
 | QQ音乐阶段 | 3.1.0：IDLE → JUMP_WAIT → IN_THIRD → RETURNING → SUCCESS_WAIT → DONE_PAGE |
 | QQ音乐停留 | 3.1.0：按页面「浏览 N 秒」动态计算，含上下限保护 |
+| 额度弹窗 ROI | 3.2.0：弹窗区 (0.10–0.90)x(0.380–0.640)，取消热区 (0.30–0.70)x(0.545–0.615) |
+| 付费词拦截 | 3.2.0：含开通/会员/元/畅听/VIP/¥/续费/支付/购买/特惠/首月/充值 一律不点 |
 
 ## 点击通道
 

@@ -1,4 +1,4 @@
-﻿package com.shangyin.auto
+package com.shangyin.auto
 
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -107,7 +107,7 @@ class MainActivity : AppCompatActivity() {
         // 关于卡片：版本号与标题栏保持一致，项目地址点击直达官方发布页
         val aboutVersion = "v" + runCatching {
             packageManager.getPackageInfo(packageName, 0).versionName
-        }.getOrDefault("3.1.0")
+        }.getOrDefault("3.2.0")
         b.tvAboutVersion.text = aboutVersion
         b.tvAboutRepo.setOnClickListener { openOfficialHome() }
 

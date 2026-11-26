@@ -22,6 +22,13 @@ object RunnerState {
     @Volatile var paused: Boolean = false
     @Volatile var message: String = "待命"
 
+    /**
+     * 停止原因提示（v3.2.0）：本轮因业务原因主动终止时写入，例如
+     * 「今日免费听歌额度已用完，已停止」。停止后悬浮条状态位直接显示该文案，
+     * 不再显示无信息量的「待命」。
+     */
+    @Volatile var haltNotice: String = ""
+
     fun reset(m: Mode, p: Platform = Platform.QISHUI) {
         mode = m
         platform = p
@@ -29,13 +36,14 @@ object RunnerState {
         clicks = 0
         lastHit = "-"
         paused = false
+        haltNotice = ""
         message = if (m == Mode.SIMULATING) "模拟中" else "运行中"
     }
 
     fun stop() {
         mode = Mode.IDLE
         paused = false
-        message = "已停止"
+        message = haltNotice.ifBlank { "已停止" }
     }
 }
 

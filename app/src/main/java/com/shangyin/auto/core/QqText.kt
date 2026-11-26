@@ -28,6 +28,9 @@ object QqText {
         val b = norm(target)
         if (a.isEmpty() || b.isEmpty()) return false
         if (a.length > 12) return false
+        // 付费 / 开通会员类按钮永远不能成为点击目标（防止误点扣费按钮导致卡死）；
+        // 例外：识别文本与目标词完全一致时放行，保证「免费畅听」这类正常入口不被误杀
+        if (a != b && isPayDanger(a)) return false
         if (QqConfig.excludeKeys.any { it in a && it !in b }) return false
         if (a == b) return true
         if (b in a && a.length <= b.length + 2) return true
@@ -150,5 +153,47 @@ object QqText {
         if (cy > screenHeight * QqConfig.LIVE_TOP_RATIO) return false
         val n = norm(text)
         return QqConfig.liveKeys.any { it in n }
+    }
+
+    // ------------------------------------------------------------------
+    // 额度耗尽终止态（v3.2.0）：只点「取消」，绝不点任何付费/开通会员按钮
+    // ------------------------------------------------------------------
+
+    /** 付费 / 开通会员类文案：命中即视为危险目标，任何规则都不得点击 */
+    fun isPayDanger(raw: String?): Boolean {
+        val n = norm(raw)
+        if (n.isEmpty()) return false
+        return QqConfig.payDangerKeys.any { it in n }
+    }
+
+    /**
+     * 「今日免费听歌额度已用完」会员付费弹窗命中。
+     * 判据：出现弹窗标题（今日免费听歌额度已用完 / 额度已用完）或副标题特征（每日限量体验），
+     * 且该文案位于弹窗区域 [QqConfig.QUOTA_DIALOG] 内，避免任务列表页文案误触发。
+     */
+    fun quotaHit(items: List<OcrItem>, w: Int, h: Int): OcrItem? {
+        if (w <= 0 || h <= 0) return null
+        for (it in items) {
+            val n = norm(it.text)
+            if (n.isEmpty()) continue
+            if (QqConfig.quotaMarkers.none { it in n }) continue
+            if (!QqConfig.QUOTA_DIALOG.contains(it.cx, it.cy, w, h)) continue
+            return it
+        }
+        return null
+    }
+
+    /**
+     * 额度耗尽弹窗里唯一允许点击的「取消」按钮：
+     * 必须落在 [QqConfig.QUOTA_CANCEL] 热区内，文案匹配「取消」，且不含任何付费文案。
+     * 付费按钮（「1.88元开会员畅听VIP曲库」）与其它任何按钮都不会被返回。
+     */
+    fun quotaCancelHit(items: List<OcrItem>, w: Int, h: Int): OcrItem? {
+        if (w <= 0 || h <= 0) return null
+        return items.asSequence()
+            .filter { QqConfig.QUOTA_CANCEL.contains(it.cx, it.cy, w, h) }
+            .filter { !isPayDanger(it.text) }
+            .filter { item -> QqConfig.quotaCancelTargets.any { t -> match(item.text, t) } }
+            .maxByOrNull { it.cy }
     }
 }

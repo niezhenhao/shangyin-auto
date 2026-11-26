@@ -53,6 +53,12 @@ class QqRunner(
     private var sameScreenRounds = 0
     private val lastClickAt = HashMap<String, Long>()
 
+    /** 额度耗尽终止态：一旦置位，本轮不再执行任何点击，主循环直接收尾退出 */
+    private var quotaStopped = false
+
+    /** 额度耗尽弹窗存在但「取消」未定位到的连续轮次，达到上限后按终止态处理，避免空转卡死 */
+    private var quotaCancelMiss = 0
+
     private val maxRounds = if (dryRun) QqConfig.simulateRounds else Int.MAX_VALUE
     private val startAt = System.currentTimeMillis()
 
@@ -93,9 +99,14 @@ class QqRunner(
             }
 
             RunnerState.rounds++
+            if (quotaStopped) {
+                LogBus.warn("额度耗尽终止态：主循环已安全退出，本轮不再做任何操作")
+                break
+            }
             if (wait > 0) delay(wait)
         }
-        LogBus.info("QQ音乐任务已结束：成功 $successCount 条，失败 $failTotal 次")
+        val tail = if (quotaStopped) QqConfig.QUOTA_STOP_TEXT else "正常结束"
+        LogBus.info("QQ音乐任务已结束：成功 $successCount 条，失败 $failTotal 次（$tail）")
     }
 
     // ------------------------------------------------------------------
@@ -112,6 +123,15 @@ class QqRunner(
         val inQq = fg == null || fg == QqConfig.PKG
 
         logPreview(items)
+
+        // v3.2.0 额度耗尽弹窗：全流程最高优先级拦截。
+        // 该弹窗盖在任务列表页上，旧版本会继续按任务列表页找「加时长/去浏览」，
+        // 点不动又反复兜底，最终卡死；更危险的是绿色付费按钮落在「免费畅听」规则 ROI 内。
+        // 因此：识别到弹窗后除「取消」外禁止任何点击，点完「取消」即安全终止本轮。
+        if (!quotaStopped) {
+            val quota = QqText.quotaHit(items, w, h)
+            if (quota != null) return quotaStop(items, w, h, quota)
+        }
 
         // 系统跳转/权限弹窗：最高优先级，点「允许」放行进第三方
         if (inSys && QqConfig.autoAllowJump && state != State.IN_THIRD) {
@@ -405,12 +425,65 @@ class QqRunner(
         return if (sameScreenRounds >= 3) QqConfig.idlePollIntervalMs else QqConfig.pollIntervalMs
     }
 
+    /**
+     * v3.2.0 额度耗尽终止态处理：
+     * 1) 只在弹窗取消热区里找「取消」，付费/开通会员按钮（含「元、会员、开通、畅听、VIP、￥」）
+     *    在任何环节都不会被点击；
+     * 2) 点「取消」关闭弹窗后立即置位终止标记，主循环不再执行任何点击，避免误关任务页；
+     * 3) 日志 + 悬浮条状态位同步提示「今日免费听歌额度已用完，已停止」，停留数秒后安全收尾退出。
+     */
+    private suspend fun quotaStop(
+        items: List<OcrItem>,
+        w: Int,
+        h: Int,
+        quota: OcrItem
+    ): Long {
+        val cancel = QqText.quotaCancelHit(items, w, h)
+        if (cancel == null) {
+            quotaCancelMiss++
+            if (quotaCancelMiss < QqConfig.quotaCancelMissLimit) {
+                LogBus.warn("检测到「${quota.text}」弹窗，但未定位到「取消」按钮：本轮不做任何点击，等待弹窗可点（第 $quotaCancelMiss 次）")
+                return 1500
+            }
+            // 多次仍定位不到「取消」：不点任何按钮，直接进入终止态收尾，避免空转卡死
+            quotaStopped = true
+            taskJumpPending = false
+            LogBus.error(QqConfig.QUOTA_STOP_TEXT + "：弹窗存在但未识别到「取消」，已放弃点击并安全终止本轮")
+            RunnerState.haltNotice = QqConfig.QUOTA_STOP_TEXT
+            RunnerState.message = QqConfig.QUOTA_STOP_TEXT
+            RunnerState.mode = RunnerState.Mode.IDLE
+            delay(QqConfig.quotaNoticeMs)
+            return 0
+        }
+        quotaCancelMiss = 0
+
+        LogBus.warn("检测到「${quota.text}」弹窗：严禁点击任何付费/开通会员按钮，仅点「${cancel.text}」关闭")
+        tapAt(cancel.cx, cancel.cy, "关闭额度耗尽弹窗")
+        lastClickAt["取消"] = System.currentTimeMillis()
+        RunnerState.lastHit = "取消"
+
+        quotaStopped = true
+        missCount = 0
+        taskJumpPending = false
+
+        LogBus.error(QqConfig.QUOTA_STOP_TEXT + "：已点「取消」关闭弹窗，本轮任务安全终止，不再执行任何点击")
+        RunnerState.haltNotice = QqConfig.QUOTA_STOP_TEXT
+        RunnerState.message = QqConfig.QUOTA_STOP_TEXT
+        RunnerState.mode = RunnerState.Mode.IDLE
+
+        // 保持提示在悬浮条上可见，随后由主循环安全退出（AutoService 收尾并释放采集）
+        delay(QqConfig.quotaNoticeMs)
+        return 0
+    }
+
     // ------------------------------------------------------------------
     // 匹配与点击
     // ------------------------------------------------------------------
 
     /** 按规则表顺序找可点目标，命中即点击并返回目标名 */
     private suspend fun findAndClick(items: List<OcrItem>, w: Int, h: Int, now: Long): String? {
+        // 额度耗尽弹窗期间：除「取消」外一律不点（由 quotaStop 统一处理，这里只做兜底拦截）
+        if (quotaStopped || QqText.quotaHit(items, w, h) != null) return null
         // 任务列表页禁止关闭类目标：该页右上角是页面自身关闭钮，点中会弹
         // 「关闭后将失去免费畅听权限，剩余时长将清零」，把已攒时长清零
         val onTaskList = QqText.isTaskListPage(items)
@@ -427,6 +500,9 @@ class QqRunner(
 
             val cands = items.filter { it ->
                 QqText.match(it.text, rule.name) && rule.roi.contains(it.cx, it.cy, w, h) &&
+                    // 付费/开通会员类按钮永不点击（含「元、会员、开通、畅听、VIP、￥」），
+                    // 仅当识别文本与目标词完全一致时放行（如正常入口「免费畅听」）
+                    !(QqText.isPayDanger(it.text) && QqText.norm(it.text) != QqText.norm(rule.name)) &&
                     // 关闭类目标绝不接受「确认关闭」这类危险确认按钮
                     !(rule.name in QqConfig.closeRuleNames &&
                         ("确认" in it.text || "清零" in it.text || "失去" in it.text))
@@ -508,6 +584,11 @@ class QqRunner(
 
     /** 关闭广告页：先按规则表文字目标，再按比例点右上角；返回是否发生了点击 */
     private suspend fun tryCloseAd(items: List<OcrItem>, w: Int = 0, h: Int = 0): Boolean {
+        // 额度耗尽弹窗：只能点「取消」，关闭类兜底一律禁用（右上角 × 可能是任务页关闭钮）
+        if (quotaStopped || QqText.quotaHit(items, w, h) != null) {
+            LogBus.info("额度耗尽弹窗期间禁用关闭类兜底，仅允许点「取消」")
+            return false
+        }
         // 任务列表页不是广告页，绝不在这里点右上角：那是页面自身的关闭钮，
         // 点中会弹「关闭后将失去免费畅听权限，剩余时长将清零」
         if (QqText.isTaskListPage(items)) {

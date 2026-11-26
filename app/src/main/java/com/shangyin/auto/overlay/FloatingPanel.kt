@@ -137,7 +137,7 @@ class FloatingPanel(
                         if (RunnerState.paused) "已暂停 · 点${RunnerState.clicks}"
                         else "运行中 · 点${RunnerState.clicks}"
                     RunnerState.Mode.SIMULATING -> "模拟中 · ${RunnerState.rounds}轮"
-                    RunnerState.Mode.IDLE -> "待命"
+                    RunnerState.Mode.IDLE -> RunnerState.haltNotice.ifBlank { "待命" }
                 }
                 if (status != lastStatusText) {
                     lastStatusText = status
