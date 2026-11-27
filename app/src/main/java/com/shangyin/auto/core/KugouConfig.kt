@@ -298,6 +298,12 @@ object KugouConfig {
     var jumpWaitMs: Long = 6000L
     var returnWaitMs: Long = 2500L
     var returnRetry: Int = 3
+
+    // ---- v3.9.3：广告结束不再连按返回键，改为按包名直接拉起主 Activity 回前台 ----
+    /** 拉起主 Activity 后等待回到前台的时间（毫秒） */
+    var bringBackWaitMs: Long = 3000L
+    /** 拉起未生效时的重试次数，超限记一次失败并回任务页 */
+    var bringBackRetry: Int = 2
     var successWaitMs: Long = 5000L
     var successDedupMs: Long = 12000L
     var doneCloseTries: Int = 3

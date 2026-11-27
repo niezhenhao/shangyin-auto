@@ -24,6 +24,7 @@ import com.shangyin.auto.core.KugouRunner
 import com.shangyin.auto.core.QqRunner
 import com.shangyin.auto.core.RunnerState
 import com.shangyin.auto.core.ScreenCapture
+import com.shangyin.auto.core.SequenceRunner
 import com.shangyin.auto.overlay.FloatingPanel
 import com.shangyin.auto.util.IntegrityGuard
 import com.shangyin.auto.util.LogBus
@@ -43,6 +44,7 @@ class AutoService : Service() {
         const val ACTION_START = "com.shangyin.auto.action.START"
         const val ACTION_START_SIM = "com.shangyin.auto.action.START_SIM"
         const val ACTION_IDLE = "com.shangyin.auto.action.IDLE"
+        const val ACTION_START_SEQ = "com.shangyin.auto.action.START_SEQ"
         const val ACTION_STOP = "com.shangyin.auto.action.STOP"
 
         const val EXTRA_RESULT_CODE = "result_code"
@@ -67,9 +69,14 @@ class AutoService : Service() {
             data: Intent,
             dryRun: Boolean,
             simulate: Boolean = false,
-            platform: Platform = Platform.QISHUI
+            platform: Platform = Platform.QISHUI,
+            sequence: Boolean = false
         ): Intent = Intent(context, AutoService::class.java).apply {
-            action = if (simulate) ACTION_START_SIM else ACTION_START
+            action = when {
+                sequence -> ACTION_START_SEQ
+                simulate -> ACTION_START_SIM
+                else -> ACTION_START
+            }
             putExtra(EXTRA_RESULT_CODE, resultCode)
             putExtra(EXTRA_DATA, data)
             putExtra(EXTRA_DRY, dryRun)
@@ -87,6 +94,8 @@ class AutoService : Service() {
     private var panel: FloatingPanel? = null
     private var dryRun = false
     private var platform: Platform = Platform.QISHUI
+    /** v3.9.3：是否为一键顺序启动模式（决定通知与运行分支） */
+    private var seqMode = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -114,7 +123,10 @@ class AutoService : Service() {
             return START_NOT_STICKY
         }
 
-        if (action == ACTION_START || action == ACTION_START_SIM || action == ACTION_IDLE) {
+        if (action == ACTION_START || action == ACTION_START_SIM || action == ACTION_IDLE ||
+            action == ACTION_START_SEQ
+        ) {
+            val seq = action == ACTION_START_SEQ
             val target = Platform.of(intent.getIntExtra(EXTRA_PLATFORM, Platform.QISHUI.id))
             // 两项任务互斥：已在跑另一项时直接拒绝，避免共用采集与悬浮条
             if (RunnerState.mode != RunnerState.Mode.IDLE && RunnerState.platform != target) {
@@ -159,7 +171,8 @@ class AutoService : Service() {
                 target,
                 simulate = action == ACTION_START_SIM,
                 dry = dryRun || action == ACTION_IDLE,
-                idle = action == ACTION_IDLE
+                idle = action == ACTION_IDLE,
+                seq = seq
             )
             return START_NOT_STICKY
         }
@@ -172,11 +185,13 @@ class AutoService : Service() {
         target: Platform,
         simulate: Boolean,
         dry: Boolean,
-        idle: Boolean = false
+        idle: Boolean = false,
+        seq: Boolean = false
     ) {
         job?.cancel()
         capture?.stop()
         platform = target
+        seqMode = seq
 
         val cap = ScreenCapture(this)
         if (!cap.start(resultCode, data)) {
@@ -194,7 +209,11 @@ class AutoService : Service() {
         }
         RunnerState.reset(mode, target)
         LogBus.ok("屏幕采集已就绪 ${cap.width}x${cap.height}")
-        LogBus.info("本次任务：${target.label}自动看广告（${target.targetHint}）")
+        if (seq) {
+            LogBus.info("本次任务：一键顺序启动（${SequenceRunner.ORDER.joinToString(" → ") { it.label }}）")
+        } else {
+            LogBus.info("本次任务：${target.label}自动看广告（${target.targetHint}）")
+        }
 
         // 二次校验：授权过程中用户可能已收回悬浮窗权限
         if (!Settings.canDrawOverlays(this)) {
@@ -215,7 +234,8 @@ class AutoService : Service() {
         val s = scope ?: CoroutineScope(SupervisorJob() + Dispatchers.Default).also { scope = it }
         job = s.launch {
             try {
-                runPlatform(cap, ocr!!, dry || simulate, target)
+                if (seq) SequenceRunner(this@AutoService, cap, ocr!!, dry || simulate).run()
+                else runPlatform(cap, ocr!!, dry || simulate, target)
             } catch (t: Throwable) {
                 LogBus.error("运行异常：${t.message}")
             } finally {
@@ -295,6 +315,7 @@ class AutoService : Service() {
         ocr = null
         panel?.dispose()
         panel = null
+        seqMode = false
         RunnerState.stop()
         LogBus.info("已停止")
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
@@ -337,8 +358,13 @@ class AutoService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat)
-            .setContentTitle("${p.label}自动看广告 · 运行中")
-            .setContentText("正在识别并点击「${p.targetHint}」")
+            .setContentTitle(
+                if (seqMode) "一键顺序启动 · 运行中" else "${p.label}自动看广告 · 运行中"
+            )
+            .setContentText(
+                if (seqMode) "按截图顺序依次拉起各平台并自动看广告"
+                else "正在识别并点击「${p.targetHint}」"
+            )
             .setContentIntent(pi)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)

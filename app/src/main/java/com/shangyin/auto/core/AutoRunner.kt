@@ -97,6 +97,21 @@ class AutoRunner(
     private var lastAdWarnAt = 0L
     private var grabFailStreak = 0
 
+    // ---- v3.9.3 会员期数到账终止态 ----
+    /** 命中「第 30 日畅听」等会员期数到账文案后置 true，主循环下一轮直接退出 */
+    private var halted = false
+
+    /**
+     * 业务终止：写入终止提示、把运行状态切回待命，并让主循环下一轮退出。
+     * 终止态下不再点击任何按钮（后续 step 不会被调用）。
+     */
+    private fun finishRun(notice: String) {
+        halted = true
+        RunnerState.haltNotice = notice
+        RunnerState.lastHit = "第30日畅听"
+        RunnerState.stop()
+    }
+
     suspend fun run() {
         LogBus.ok(
             if (dryRun) "开始模拟：只识别不点击，最多 ${AutoConfig.simulateRounds} 轮"
@@ -104,7 +119,7 @@ class AutoRunner(
         )
         LogBus.info("点击通道：${Clicker.channelName()}｜轮询 ${AutoConfig.pollIntervalMs}ms")
 
-        while (currentCoroutineContext().isActive) {
+        while (!halted && currentCoroutineContext().isActive) {
             if (dryRun && (RunnerState.rounds >= maxRounds ||
                         System.currentTimeMillis() - startAt > AutoConfig.simulateTimeoutMs)
             ) {
@@ -156,6 +171,15 @@ class AutoRunner(
         if (items.isEmpty()) {
             onMiss("OCR 无结果")
             return false
+        }
+
+        // 0. 会员期数到账（第 30 日畅听）：账号已到顶，命中即暂停运行并退出，不再点击任何按钮
+        val memberLine = QishuiText.memberDaysHit(items)
+        if (memberLine != null) {
+            val notice = "已到第30日畅听，已自动停止运行"
+            LogBus.ok("⚑ 识别到「${memberLine.text}」→ $notice")
+            finishRun(notice)
+            return true
         }
 
         // 识别预览只在内容变化时输出，避免刷屏与字符串分配

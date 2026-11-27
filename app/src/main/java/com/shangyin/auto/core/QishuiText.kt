@@ -168,4 +168,41 @@ object QishuiText {
     /** 面板文案是否「离点击点很近」（容差校验，避免跨区域误点） */
     fun near(x: Float, y: Float, targetX: Float, targetY: Float, tolerance: Float): Boolean =
         abs(x - targetX) <= tolerance && abs(y - targetY) <= tolerance
+
+    // ------------------------------------------------------------------
+    // v3.9.3 新增：会员期数到账（第 30 日畅听）识别
+    // ------------------------------------------------------------------
+
+    /**
+     * 「第 30 日畅听」类到账文案关键词。
+     *
+     * 汽水音乐的看广告奖励是按天累计的，领到第 30 日后会弹
+     * 「恭喜获得第30日畅听」（也可能写作「恭喜获得第30天畅听」「已获得 30 日畅听」）。
+     * 此时账号已经拿到整月畅听，再继续点只会白白消耗广告与时间，
+     * 因此命中即进入终止态，不再点击任何按钮。
+     */
+    val memberDaysKeys = listOf(
+        "第30日畅听", "第30天畅听", "恭喜获得第30", "获得30日畅听", "获得30天畅听",
+        "第 30 日畅听", "30日畅听", "30天畅听", "畅听30天", "畅听30日"
+    )
+
+    /**
+     * 是否是「第 N 日畅听」到账文案。先用关键词快速命中，
+     * 再用正则兜住文案微调（第30日 / 第三十日 / 第 30 天），两侧必须带「畅听」或「获得」，
+     * 避免把「免费听时长30天」这种入口文案误判成到账提示。
+     */
+    fun memberDaysLine(raw: String): Boolean {
+        val n = TextMatch.normalize(raw)
+        if (n.isEmpty()) return false
+        if (!n.contains("畅听") && !n.contains("获得") && !n.contains("领取")) return false
+        if (memberDaysKeys.any { it in n }) return true
+        if (MANY_DAYS_REGEX.containsMatchIn(n)) return true
+        return false
+    }
+
+    /** OCR 全量条目中查找「第 30 日畅听」到账文案 */
+    fun memberDaysHit(items: List<OcrItem>): OcrItem? =
+        items.filter { memberDaysLine(it.text) }.maxByOrNull { it.score }
+
+    private val MANY_DAYS_REGEX = Regex("第\\s*(30|三十)\\s*[日天]")
 }

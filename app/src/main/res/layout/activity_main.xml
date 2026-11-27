@@ -69,7 +69,7 @@
             android:textColor="@color/ink_secondary"
             android:textSize="13sp" />
 
-        <!-- 官方来源水印：任何人不得在电商/二手平台售卖 -->
+        <!-- 防盗版水印：任何人不得在电商/二手平台售卖 -->
         <TextView
             android:id="@+id/tvOfficial"
             android:layout_width="wrap_content"
@@ -151,6 +151,15 @@
                     android:text="@string/btn_run"
                     android:textSize="16sp"
                     app:cornerRadius="16dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSeqRun"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/btn_seq_run"
+                    app:cornerRadius="14dp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -756,27 +765,36 @@
                         style="@style/BodyText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="v2.2.1"
+                        android:text="v3.9.3"
                         android:textColor="@color/ink" />
                 </LinearLayout>
 
-                <!-- 项目地址 -->
+                <!-- 版本更新预览（默认折叠，点击标题展开 / 收起） -->
                 <TextView
+                    android:id="@+id/tvChangelogTitle"
                     style="@style/BodyText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/about_repo_label" />
+                    android:layout_marginTop="12dp"
+                    android:text="版本更新预览（点击展开）"
+                    android:textColor="@color/brand" />
 
-                <TextView
-                    android:id="@+id/tvAboutRepo"
-                    style="@style/BodyText"
+                <ScrollView
+                    android:id="@+id/svChangelog"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:autoLink="web"
-                    android:text="@string/about_repo_url"
-                    android:textColor="@color/brand"
-                    android:textIsSelectable="false" />
+                    android:layout_height="240dp"
+                    android:layout_marginTop="6dp"
+                    android:scrollbars="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/tvChangelog"
+                        style="@style/BodyText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:lineSpacingExtra="3dp"
+                        android:textSize="12sp" />
+                </ScrollView>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

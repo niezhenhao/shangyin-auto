@@ -110,4 +110,15 @@ object AutoConfig {
 
     /** 节点点击的坐标容差（占屏幕高度比例），用于避免同名字样跨区域误点 */
     var nodeClickToleranceRatio: Float = 0.08f
+
+    // ---- v3.9.3 一键顺序启动 ----
+
+    /** 顺序启动时单个平台的最长运行时间（毫秒），到时自动切下一个平台 */
+    var seqPerPlatformMs: Long = 8 * 60_000L
+
+    /** 顺序启动时拉起 App 后等待首页渲染的时间（毫秒） */
+    var seqLaunchWaitMs: Long = 9000L
+
+    /** 顺序启动时单个平台结束到下一个平台之间的间隔（毫秒） */
+    var seqSwitchDelayMs: Long = 3000L
 }

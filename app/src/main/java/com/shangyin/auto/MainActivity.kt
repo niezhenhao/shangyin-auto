@@ -9,12 +9,14 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import android.text.method.ScrollingMovementMethod
+import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.shangyin.auto.a11y.TapService
+import com.shangyin.auto.core.ChangeLog
 import com.shangyin.auto.core.Clicker
 import com.shangyin.auto.core.Platform
 import com.shangyin.auto.core.RunnerState
@@ -46,6 +48,7 @@ class MainActivity : AppCompatActivity() {
         private const val KIND_RUN = 0
         private const val KIND_SIM = 1
         private const val KIND_IDLE = 2
+        private const val KIND_SEQ = 3
         private const val REQ_SHIZUKU = 3001
     }
 
@@ -80,6 +83,10 @@ class MainActivity : AppCompatActivity() {
                 KIND_IDLE -> AutoService.buildIntent(
                     this, result.resultCode, data, dryRun = true, simulate = true, platform = pendingPlatform
                 )
+                KIND_SEQ -> AutoService.buildIntent(
+                    this, result.resultCode, data, dryRun = false,
+                    platform = Platform.QISHUI, sequence = true
+                )
                 else -> AutoService.buildIntent(
                     this, result.resultCode, data, dryRun = false, platform = pendingPlatform
                 )
@@ -109,12 +116,20 @@ class MainActivity : AppCompatActivity() {
             packageManager.getPackageInfo(packageName, 0).versionName
         }.getOrDefault("1.0")
 
-        // 关于卡片：版本号与标题栏保持一致，项目地址点击直达官方发布页
+        // 关于卡片：版本号与标题栏保持一致；版本更新预览默认折叠，点击标题展开 / 收起
         val aboutVersion = "v" + runCatching {
             packageManager.getPackageInfo(packageName, 0).versionName
-        }.getOrDefault("3.9.2")
+        }.getOrDefault("3.9.3")
         b.tvAboutVersion.text = aboutVersion
-        b.tvAboutRepo.setOnClickListener { openOfficialHome() }
+        b.tvChangelog.text = ChangeLog.CONTENT
+        b.tvChangelogTitle.text = ChangeLog.TITLE_COLLAPSED
+        b.tvChangelogTitle.setOnClickListener {
+            val expand = b.svChangelog.visibility != View.VISIBLE
+            b.svChangelog.visibility = if (expand) View.VISIBLE else View.GONE
+            b.tvChangelogTitle.text =
+                if (expand) ChangeLog.TITLE_EXPANDED else ChangeLog.TITLE_COLLAPSED
+            if (expand) b.svChangelog.scrollTo(0, 0)
+        }
 
         b.tvLog.movementMethod = ScrollingMovementMethod()
 
@@ -124,6 +139,7 @@ class MainActivity : AppCompatActivity() {
         b.btnRun.setOnClickListener { begin(KIND_RUN, Platform.QISHUI) }
         b.btnSimulate.setOnClickListener { begin(KIND_SIM, Platform.QISHUI) }
         b.btnFloat.setOnClickListener { begin(KIND_IDLE, Platform.QISHUI) }
+        b.btnSeqRun.setOnClickListener { begin(KIND_SEQ, Platform.QISHUI) }
         b.btnStop.setOnClickListener { stopAll() }
 
         // QQ音乐入口：与汽水音乐互斥，悬浮条只显示 QQ音乐
@@ -520,6 +536,7 @@ class MainActivity : AppCompatActivity() {
             b.btnRun.isEnabled = false
             b.btnSimulate.isEnabled = false
             b.btnFloat.isEnabled = false
+            b.btnSeqRun.isEnabled = false
             b.btnQqRun.isEnabled = false
             b.btnQqSimulate.isEnabled = false
             b.btnQqFloat.isEnabled = false

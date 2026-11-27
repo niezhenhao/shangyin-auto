@@ -18,7 +18,7 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 不需要电脑、不需要数据线，全部在手机上完成：截图 → 离线中文 OCR → 匹配目标词 → 点击。
 
 - 包名：`com.shangyin.auto`
-- 版本：**3.9.2**（release 正式签名，内置防盗版校验）
+- 版本：**3.9.3**（release 正式签名，内置防盗版校验）
 - 最低系统：Android 8.0（API 26），推荐 Android 11+（无线调试启动 Shizuku 需要 11+）
 
 > 本软件**完全免费**，官方发布地址为 GitHub 仓库 `niezhenhao/shangyin-auto` 与 Gitee 镜像仓库 `hejncdjd/shangyin-auto`（两处代码、历史 tag 完全一致）。
@@ -30,12 +30,24 @@ ADB + OCR 自动看广告脚本，改造成手机本地运行的 Android App。
 
 | 方式 | 地址 |
 | --- | --- |
-| GitHub Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v3.9.2/ShangYin-v3.9.2-release.apk |
-| Gitee 发行版附件（国内推荐） | https://gitee.com/hejncdjd/shangyin-auto/releases/download/v3.9.2/ShangYin-v3.9.2-release.apk |
-| GitHub Releases 页面 | https://github.com/niezhenhao/shangyin-auto/releases/tag/v3.9.2 |
-| Gitee 发行版页面 | https://gitee.com/hejncdjd/shangyin-auto/releases/tag/v3.9.2 |
+| GitHub Release 附件（推荐） | https://github.com/niezhenhao/shangyin-auto/releases/download/v3.9.3/ShangYin-v3.9.3-release.apk |
+| Gitee 发行版附件（国内推荐） | https://gitee.com/hejncdjd/shangyin-auto/releases/download/v3.9.3/ShangYin-v3.9.3-release.apk |
+| GitHub Releases 页面 | https://github.com/niezhenhao/shangyin-auto/releases/tag/v3.9.3 |
+| Gitee 发行版页面 | https://gitee.com/hejncdjd/shangyin-auto/releases/tag/v3.9.3 |
 
 安装前注意：若手机已装 1.0.0（debug 签名），请先卸载再装；2.0.0 及之后均为同一 release 签名，可直接覆盖升级。
+
+## 3.9.3 更新（第30日畅听终止 · 一键顺序启动 · 关于页改版）
+
+| 项 | 3.9.3 的变化 |
+| --- | --- |
+| 汽水会员期数到账终止 | 新增会员期数到账文案识别（「恭喜获得第30日畅听」「第30日畅听」等，含「第N日/天」正则），命中即进入终止态：写入「已到第30日畅听，已自动停止运行」提示并退出主循环，不再点击任何按钮 |
+| 跳转型三平台收尾改造 | QQ音乐 / 酷狗音乐 / 网易云音乐 第三方广告停留时间到后，取消「连续 3 次返回键」旧收尾，改为按平台包名直接拉起其主 Activity（Shizuku 走 monkey，否则 LAUNCHER Intent + NEW_TASK / RESET_TASK_IF_NEEDED），把音乐 App 拉回前台后继续领取 / 关 X 流程，避免连按返回误退或落到桌面 |
+| 拉起重试与降级 | 新增 bringBackWaitMs=3000 / bringBackRetry=2：拉起后 3 秒仍未回前台则再拉一次，两次无效记一次失败并回任务页，日志留痕 |
+| 一键顺序启动 | 汽水音乐卡片新增「一键顺序启动」按钮：按截图圈注顺序（汽水 → QQ → 酷狗 → 网易云）依次拉起各 App，自动找底部 tab 与页面内看广告入口并点击，进入后启动该平台 Runner，单平台限时 8 分钟，失败跳过并在日志标注原因 |
+| 关于页 · 版本更新预览 | 新增「版本更新预览」区块，内置 3.7.0 / 3.8.0 / 3.9.0 / 3.9.1 / 3.9.2 / 3.9.3 更新要点；默认折叠，点击标题展开或收起，内容区固定高度可滚动 |
+| 关于页 · 声明精简 | 移除项目地址与「官方免费版 / 官方唯一地址」等官方来源、渠道类文字声明，仅保留盗版声明（禁止任何平台售卖、付费购买请退款举报）；主界面与悬浮条水印同步改为纯盗版提示，版本号、包名不变 |
+| 版本 | versionCode 42 / versionName 3.9.3，关于卡片版本兜底值同步为 3.9.3 |
 
 ## 3.9.2 更新（网易云音乐 · 自动看广告）
 

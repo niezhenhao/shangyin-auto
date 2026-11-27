@@ -11,6 +11,7 @@
     <string name="btn_run">汽水音乐看广告启动</string>
     <string name="btn_simulate">模拟跑一遍</string>
     <string name="btn_float">悬浮窗</string>
+    <string name="btn_seq_run">一键顺序启动（按截图顺序：汽水 → QQ → 酷狗 → 网易云）</string>
     <string name="btn_stop">停止</string>
 
     <string name="qq_title">QQ音乐自动看广告</string>
@@ -40,21 +41,19 @@
     <string name="perm_battery">电池优化白名单</string>
 
     <string name="about_title">关于</string>
-    <string name="about_desc">上音是一款针对汽水音乐、QQ音乐、酷狗音乐、网易云音乐「看广告领奖励」的自动化辅助工具：自动识别界面上的「领取奖励 / 继续观看 / 领取成功」或「看广告 / 点击跳转后浏览N秒 / 自动看广告续时长 / 观看领奖励」并完成点击，把重复操作交给程序。所有识别与操作均在本机完成，不上传截图、账号或任何个人数据；仅在使用说明关闭后向 GitHub 公共接口查询一次新版本号。</string>
+    <string name="about_desc">上音是一款针对汽水音乐、QQ音乐、酷狗音乐、网易云音乐「看广告领奖励」的自动化辅助工具：自动识别界面上的「领取奖励 / 继续观看 / 领取成功」或「看广告 / 点击跳转后浏览N秒 / 自动看广告续时长 / 观看领奖励」并完成点击，把重复操作交给程序。所有识别与操作均在本机完成，不上传截图、账号或任何个人数据；仅在使用说明关闭后向公共接口查询一次新版本号。</string>
     <string name="about_features">主要功能：汽水音乐自动看广告领奖励 · QQ音乐自动看广告免费听歌 · 酷狗音乐自动看广告续时长 · 网易云音乐自动看广告 · 悬浮控制条（暂停 / 模拟 / 停止，按启动来源只显示当前任务）· 无障碍点击与 Shizuku 双通道 · 实时运行日志 · 屏幕截图权限按次授权 · 启动后自动检测新版本。</string>
-    <string name="about_free">完全免费 · 开源 · 无广告 · 无内购，官方仅在本项目地址发布；任何电商、二手平台的售卖均为盗卖，请勿购买。</string>
+    <string name="about_free">本软件严禁任何形式的售卖与转售：在闲鱼、淘宝、拼多多等电商或二手平台出售本软件或本安装包的，均为盗卖。若你是付费购买，请立即申请退款、向平台举报卖家。</string>
     <string name="about_author_label">作者</string>
     <string name="about_author">niezhenhao</string>
     <string name="about_version_label">版本</string>
-    <string name="about_repo_label">项目地址</string>
-    <string name="about_repo_url">https://github.com/niezhenhao/shangyin-auto</string>
 
     <string name="overlay_required_title">请先开启悬浮窗权限</string>
     <string name="overlay_required_msg">上音运行期间需要在目标音乐 App 上层显示悬浮控制条（暂停 / 模拟 / 停止），未开启悬浮窗权限时无法正常启动。\n\n请到「权限中心 · 悬浮窗」点击「去开启」授权后再试。</string>
     <string name="overlay_required_open">去开启</string>
 
     <string name="log_title">运行日志</string>
-    <string name="official_mark">官方免费版 · github.com/niezhenhao/shangyin-auto · 禁止任何平台售卖</string>
-    <string name="official_mark_short">上音 官方免费版 · 禁止售卖</string>
+    <string name="official_mark">禁止任何平台售卖 · 盗卖必究</string>
+    <string name="official_mark_short">上音 · 禁止售卖</string>
     <string name="piracy_title">非官方版本，已停止运行</string>
 </resources>

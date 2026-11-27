@@ -167,7 +167,7 @@ class CloudRunner(
         }
     }
 
-    /** 第三方停留计时：到点按返回 */
+    /** 第三方停留计时：到点按包名直接拉起网易云音乐主 Activity（v3.9.3 起不再按返回键） */
     private suspend fun inThird(now: Long, inCloud: Boolean): Long {
         val elapsed = (now - thirdEnterTs) / 1000f
         if (inCloud && elapsed > 2f) {
@@ -177,17 +177,17 @@ class CloudRunner(
             return 600
         }
         if (elapsed >= dwellPlanSec) {
-            LogBus.ok("第三方已停留 ${"%.0f".format(elapsed)}s（计划 ${dwellPlanSec}s），按返回")
-            back("返回网易云音乐")
+            LogBus.ok("第三方已停留 ${"%.0f".format(elapsed)}s（计划 ${dwellPlanSec}s），按包名拉回网易云音乐")
+            launchCloud()
             state = State.RETURNING
             returnTs = now
             returnTries = 0
-            return CloudConfig.returnWaitMs
+            return CloudConfig.bringBackWaitMs
         }
         return 800
     }
 
-    /** 等回到主 App；多次返回无效时重新拉起网易云，并记一次失败 */
+    /** 等网易云回到前台；未回来时再次按包名拉起，连续失败才记一次失败 */
     private suspend fun returning(now: Long, inCloud: Boolean): Long {
         if (inCloud) {
             LogBus.ok("已回到网易云音乐，等待「观看领奖励」弹窗")
@@ -195,16 +195,15 @@ class CloudRunner(
             succWaitTs = now
             return 600
         }
-        if (now - returnTs >= CloudConfig.returnWaitMs) {
-            if (returnTries < CloudConfig.returnRetry) {
+        if (now - returnTs >= CloudConfig.bringBackWaitMs) {
+            if (returnTries < CloudConfig.bringBackRetry) {
                 returnTries++
-                LogBus.warn("仍未回到网易云音乐，再按一次返回（第 $returnTries/${CloudConfig.returnRetry} 次）")
-                back("返回")
+                LogBus.warn("网易云音乐未回到前台，再次按包名拉起（第 $returnTries/${CloudConfig.bringBackRetry} 次）")
+                launchCloud()
                 returnTs = now
                 return 1200
             }
-            LogBus.warn("多次返回无效，尝试重新拉起网易云音乐")
-            launchCloud()
+            LogBus.warn("多次拉起网易云音乐仍无效，记一次失败并回到任务页")
             state = State.IDLE
             returnTries = 0
             pendingSuccessCheck = false

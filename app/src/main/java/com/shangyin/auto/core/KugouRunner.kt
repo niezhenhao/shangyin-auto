@@ -180,7 +180,7 @@ class KugouRunner(
         }
     }
 
-    /** 第三方停留计时：到点按返回 */
+    /** 第三方停留计时：到点按包名直接拉起 酷狗音乐 主 Activity（v3.9.3 起不再按返回键） */
     private suspend fun inThird(now: Long, inQq: Boolean): Long {
         val elapsed = (now - thirdEnterTs) / 1000f
         if (inQq && elapsed > 2f) {
@@ -190,17 +190,17 @@ class KugouRunner(
             return 600
         }
         if (elapsed >= dwellPlanSec) {
-            LogBus.ok("第三方已停留 ${"%.0f".format(elapsed)}s（计划 ${dwellPlanSec}s），按返回")
-            back("返回 酷狗音乐")
+            LogBus.ok("第三方已停留 ${"%.0f".format(elapsed)}s（计划 ${dwellPlanSec}s），按包名拉回酷狗音乐")
+            launchApp()
             state = State.RETURNING
             returnTs = now
             returnTries = 0
-            return KugouConfig.returnWaitMs
+            return KugouConfig.bringBackWaitMs
         }
         return 800
     }
 
-    /** 等回到主 App；多次返回无效时重新拉起 酷狗音乐，并记一次失败 */
+    /** 等酷狗音乐回到前台；未回来时再次按包名拉起，连续失败才记一次失败 */
     private suspend fun returning(now: Long, inQq: Boolean): Long {
         if (inQq) {
             LogBus.ok("已回到 酷狗音乐，等待「恭喜获得」")
@@ -208,16 +208,15 @@ class KugouRunner(
             succWaitTs = now
             return 600
         }
-        if (now - returnTs >= KugouConfig.returnWaitMs) {
-            if (returnTries < KugouConfig.returnRetry) {
+        if (now - returnTs >= KugouConfig.bringBackWaitMs) {
+            if (returnTries < KugouConfig.bringBackRetry) {
                 returnTries++
-                LogBus.warn("仍未回到 酷狗音乐，再按一次返回（第 $returnTries/${KugouConfig.returnRetry} 次）")
-                back("返回")
+                LogBus.warn("酷狗音乐未回到前台，再次按包名拉起（第 $returnTries/${KugouConfig.bringBackRetry} 次）")
+                launchApp()
                 returnTs = now
                 return 1200
             }
-            LogBus.warn("多次返回无效，尝试重新拉起 酷狗音乐")
-            launchApp()
+            LogBus.warn("多次拉起酷狗音乐仍无效，记一次失败并回到任务页")
             state = State.IDLE
             returnTries = 0
             fail()
